@@ -1,7 +1,7 @@
 # Finanzas del Hogar Juani–Mili — Diseño del MVP
 
 **Fecha:** 2026-11-09
-**Estado:** Pendiente de revisión
+**Estado:** Aprobada (2026-11-09). Cambio posterior: IA fuera del MVP.
 **Autores:** Juani + Claude (brainstorming con grill-me + superpowers:brainstorming)
 
 ---
@@ -41,7 +41,7 @@ Automatizar de punta a punta el seguimiento de las finanzas del hogar de Juani y
 | Q7 | Cuentas propias | Lista de cuentas propias con tipo `Ahorro/Inversión` o `Movimiento interno`. Nunca cuentan como gasto. La lista concreta se carga al configurar. |
 | Q8 | Crédito | El gasto cuenta en la **fecha de compra**. El pago de la tarjeta se registra, pero no suma como gasto. Conciliación mensual contra el PDF y cuotas (una por mes): después del MVP. |
 | Q9 | Categorías | Ver §5.4. |
-| Q10 | Clasificación | Memoria de cuentas → reglas exactas → reglas por palabra contenida → IA (Claude Haiku). La IA solo ve comercio, monto y fecha. Aprendizaje acumulativo (§7). |
+| Q10 | Clasificación | Memoria de cuentas → reglas exactas → reglas por palabra contenida. **Sin IA en el MVP** (decisión del 2026-11-09): lo desconocido queda `pendiente` en "Para revisar" y cada corrección crea una regla. Aprendizaje acumulativo (§7). IA: después del MVP. |
 | Q11 | Tienda | No aplica (no existe tienda). Sin categoría "Negocio". |
 | Q12 | Historial | Reconstrucción hacia atrás desde los mails de Itaú. Importación de la planilla 2024 como gastos: después del MVP. |
 | Q13 | Construcción | La construye Claude y Juani revisa y aprueba cada etapa. **MVP en ~2 días.** |
@@ -55,7 +55,7 @@ Automatizar de punta a punta el seguimiento de las finanzas del hogar de Juani y
 ### Día 1: captura y clasificación
 - Lectura diaria de los avisos de Itaú en Gmail (4 formatos).
 - Conversión de moneda con la cotización del BCU.
-- Memoria de cuentas, reglas exactas y reglas por palabra contenida, IA como último recurso.
+- Memoria de cuentas, reglas exactas y reglas por palabra contenida. Lo desconocido queda pendiente de revisión.
 - Lista inicial de unas 40 reglas de comercios uruguayos habituales.
 - Reconstrucción hacia atrás desde los mails viejos, por lotes.
 - Filtro de reenvío configurado en el Gmail de Mili.
@@ -66,7 +66,7 @@ Automatizar de punta a punta el seguimiento de las finanzas del hogar de Juani y
 - Instalada en el Android de Juani y el iPhone de Mili.
 
 ### Después del MVP (en el orden que se decida)
-Presupuesto por categoría · Tasa de ahorro automática · Conciliación mensual con el PDF + cuotas · Importación de la planilla 2024 · Vistas por semana y año · Totales por comercio a nivel anual · Lectura de notificaciones de Android · Escritura sin conexión.
+Clasificación con IA · Presupuesto por categoría · Tasa de ahorro automática · Conciliación mensual con el PDF + cuotas · Importación de la planilla 2024 · Vistas por semana y año · Totales por comercio a nivel anual · Lectura de notificaciones de Android · Escritura sin conexión.
 
 ---
 
@@ -235,12 +235,10 @@ Columnas: `nombre`, `grupo`, `orden`, `activa`. Se puede editar sin tocar códig
 2. **Cuenta** (transferencias): `cuenta_destino` en `Cuentas` → su categoría y su "Quién". Si es `propia_*`, la categoría es `Ahorro/Inversión` o `Movimiento interno`.
 3. **Regla exacta:** `comercio == patron`.
 4. **Regla por palabra contenida:** `comercio` contiene `patron`. Si coinciden varias, gana el patrón más largo.
-5. **IA:** Claude Haiku. Recibe la lista de categorías, el comercio, el monto, la moneda, el tipo y hasta 30 ejemplos de `Reglas`. Devuelve un JSON `{categoria, descripcion, confianza}`.
-   - `confianza ≥ 0.8` → se asigna, `revisado = false`, marcado como "sugerido por IA".
-   - `confianza < 0.8` → `categoria = Otros`, `revisado = false`, destacado.
+5. **Sin coincidencia:** `categoria = Otros`, `clasificado_por = pendiente`, `revisado = false`. (La IA queda para después del MVP.)
 6. Transferencia a una cuenta desconocida → `pendiente`, y la app pide un nombre y una categoría.
 
-**Privacidad:** a la IA solo le llegan el comercio, el monto, la moneda, el tipo y la fecha. Nunca nombres, números de tarjeta ni números de cuenta. La clave de la API va en `Script Properties`.
+**Al aprender (app):** después de una corrección, la app aplica la regla nueva a los demás movimientos pendientes y no bloqueados del mismo comercio o cuenta, para que confirmar un comercio resuelva todos sus pendientes de una vez.
 
 ### 7.3 Aprendizaje acumulativo
 | Evento (en la app) | Efecto inmediato |
@@ -252,7 +250,7 @@ Columnas: `nombre`, `grupo`, `orden`, `activa`. Se puede editar sin tocar códig
 
 **Consolidación diaria (Apps Script):**
 - **Agrupación:** si hay ≥ 2 reglas `exacta` con una misma palabra (que no esté en `stopwords`, con ≥ 4 letras) y la misma categoría, se crea la regla `contiene` con esa palabra (`origen = agrupacion`), siempre que no choque con una regla existente que la contenga y vaya a otra categoría.
-- **Reclasificación:** los movimientos no bloqueados con `clasificado_por ∈ {ia, pendiente}` se vuelven a pasar por §7.2 con las reglas nuevas.
+- **Reclasificación:** los movimientos no bloqueados con `clasificado_por = pendiente` se vuelven a pasar por §7.2 con las reglas nuevas.
 - **Conflictos:** manual > regla > IA. Lo más reciente le gana a lo anterior. Cada cambio se anota en el `Log`.
 
 ### 7.4 Reglas iniciales
@@ -271,7 +269,8 @@ Unas 40 reglas para comercios uruguayos habituales: supermercados (Devoto, Disco
 - **Login:** Google Identity Services. Cliente OAuth en un proyecto de Google Cloud en "modo de prueba" con 2 usuarios de prueba. Alcance: `spreadsheets`. Lista de mails permitidos dentro de la app (Juani y Mili).
 - **Datos:** API de Google Sheets con el token del usuario. Al abrir, lee `Movimientos` del mes actual y el anterior, más `Categorías`, `Reglas` y `Cuentas`. Los totales se calculan en el celular.
 - **Escritura:** actualizaciones de una sola fila (`values.update`) y altas (`values.append`) en `Reglas` y `Cuentas`.
-- **Procesar ahora:** llama al Apps Script publicado como API de ejecución (o como web app con verificación de token).
+- **Procesar ahora:** menú "Finanzas" en la planilla (Procesar ahora / Consolidar reglas / Reconstruir historial). La app no lo dispara en el MVP.
+- **Alojamiento:** GitHub Pages requiere repositorio público en cuentas gratis; el repo no contiene datos ni secretos. Alternativa: Cloudflare Pages.
 - **Toggle UYU/USD:** se guarda por dispositivo (`localStorage`).
 
 ### 8.2 Pantallas
@@ -279,7 +278,7 @@ Unas 40 reglas para comercios uruguayos habituales: supermercados (Devoto, Disco
 2. **Para revisar:** una tarjeta por movimiento, con ✓ confirmar · cambiar categoría · cambiar "Quién". Las cuentas nuevas piden nombre y categoría. El contador baja hasta "todo revisado".
 3. **Categorías:** lista agrupada por Fijos y Variables con sus totales → comercios con el total del mes y del año → movimientos.
 4. **Movimientos:** lista completa con buscador y filtros de mes, categoría y quién. Cualquier movimiento se puede editar (y queda `bloqueado`).
-5. **Botón +:** monto, moneda, descripción, categoría (la IA sugiere a partir de la descripción) y quién. Se guarda con `origen = manual`.
+5. **Botón +:** monto, moneda, descripción, categoría (sugerida por las reglas aplicadas a la descripción) y quién. Se guarda con `origen = manual`.
 
 ### 8.3 Principios de diseño
 - La bandeja de pendientes, siempre a la vista en Inicio (no escondida detrás de un filtro).
@@ -297,7 +296,6 @@ Unas 40 reglas para comercios uruguayos habituales: supermercados (Devoto, Disco
 - Los datos quedan en la cuenta de Google de Juani. La planilla está compartida solo con Mili.
 - La app no tiene servidor propio ni base de datos externa.
 - Solo se guardan los últimos 4 dígitos de las tarjetas. Los números de cuenta de terceros quedan solo en la planilla.
-- La IA recibe el mínimo de datos (§7.2). La clave de la API va en `Script Properties`.
 - El repositorio de la app no contiene datos, claves ni números de cuenta. Las muestras de mails para pruebas se anonimizan.
 
 ---
@@ -319,7 +317,6 @@ Unas 40 reglas para comercios uruguayos habituales: supermercados (Devoto, Disco
 
 ## 11. Configuración inicial (una sola vez)
 1. Juani: dar permisos al Apps Script (Gmail, Sheets, solicitudes externas).
-2. Cargar la clave de la API de Anthropic en `Script Properties`.
 3. Crear el proyecto de Google Cloud y el cliente OAuth (modo de prueba, 2 usuarios). Guiado paso a paso.
 4. Mili: crear el filtro de Gmail que reenvía `from:comunicaciones@itau.com.uy` al Gmail de Juani (y confirmar la dirección de reenvío).
 5. Completar `Cuentas`: tarjetas propias con su titular (1025 → Compartido; las de Mili → Mili), cuentas propias (OCA Blue, etc.) con su tipo.
