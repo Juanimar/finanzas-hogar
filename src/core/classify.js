@@ -19,12 +19,12 @@ function matchRule(comercio, reglas) {
   return { regla: hits[0], por: 'regla_contiene' };
 }
 
-const fromRule = (hit, comercio, quien) => ({
+const fromRule = (hit, comercio, quien, revisado = hit.regla.origen !== 'agrupacion') => ({
   categoria: hit.regla.categoria,
   quien: hit.regla.quien || quien,
   descripcion: hit.regla.descripcion || titleCase(comercio),
   clasificado_por: hit.por,
-  revisado: true,
+  revisado,
 });
 
 export function classify(mov, { reglas, cuentas }) {
@@ -48,7 +48,8 @@ export function classify(mov, { reglas, cuentas }) {
     }
     const banco = normalizeComercio(mov.banco_destino);
     const hit = matchRule(banco, reglas);
-    if (hit) return fromRule(hit, banco, quien);
+    // Bank-name matches (e.g. any Midinero wallet) are a guess: keep them for review.
+    if (hit) return fromRule(hit, banco, quien, false);
     return { categoria: 'Otros', quien, descripcion: `Transferencia a ${mov.banco_destino || ''} ${mov.cuenta_destino}`.replace(/\s+/g, ' ').trim(), clasificado_por: 'pendiente', revisado: false };
   }
 

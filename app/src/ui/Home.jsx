@@ -1,4 +1,4 @@
-import { monthSummary, cumulativeByDay } from '../../../src/core/aggregate.js';
+import { monthSummary, cumulativeByDay, unreadMailCount } from '../../../src/core/aggregate.js';
 import { Chart } from './Chart.jsx';
 import { fmt, monthLabel, shiftMonth } from './format.js';
 
@@ -10,10 +10,16 @@ export function Home({ state, month, currency, go, isCurrentMonth }) {
   const today = isCurrentMonth ? new Date().getDate() : cur.length;
   const prevSameDay = prev[Math.min(today, prev.length) - 1] || 0;
   const delta = prevSameDay ? Math.round(((cur[today - 1] - prevSameDay) / prevSameDay) * 100) : null;
-  const sinLeer = state.movs.length === 0;
+  const sinDatos = state.movs.length === 0;
+  const noLeidos = unreadMailCount(state.logs || [], new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10));
 
   return (
     <div class="screen">
+      {noLeidos > 0 && (
+        <div class="card warn small">
+          {noLeidos === 1 ? '1 mail de Itaú no se pudo leer' : `${noLeidos} mails de Itaú no se pudieron leer`}. Están en Gmail con la etiqueta <b>Finanzas/Revisar</b>; cargalos con el botón + y avisá para ajustar el lector.
+        </div>
+      )}
       {s.pendientes > 0 && (
         <button class="card pending" onClick={() => go('revisar')}>
           <span class="pending-n">{s.pendientes}</span>
@@ -49,7 +55,7 @@ export function Home({ state, month, currency, go, isCurrentMonth }) {
         </div>
         <div class="small muted">{s.metric.reglas}% automático · {s.metric.manual}% a mano · {s.metric.pendiente}% pendiente</div>
       </section>
-      {sinLeer && <p class="muted center">Todavía no hay movimientos. Corré "Finanzas → Reconstruir historial" en la planilla.</p>}
+      {sinDatos && <p class="muted center">Todavía no hay movimientos. Corré "Finanzas → Reconstruir historial" en la planilla.</p>}
     </div>
   );
 }

@@ -77,3 +77,13 @@ describe('applyToSimilar', () => {
     expect(changed[0]).toMatchObject({ categoria: 'Casa', clasificado_por: 'regla_exacta', revisado: true });
   });
 });
+
+describe('classify — review fixes', () => {
+  it('matches from auto-grouped rules stay for review', () => {
+    const ctx2 = { reglas: [{ tipo: 'contiene', patron: 'KIOSCO', categoria: 'Casa', origen: 'agrupacion' }], cuentas: [] };
+    expect(classify(consumo('KIOSCO NUEVO'), ctx2)).toMatchObject({ categoria: 'Casa', revisado: false, clasificado_por: 'regla_contiene' });
+  });
+  it('bank-name matches on unknown transfers stay for review', () => {
+    expect(classify(transf('3111225', 'Midinero'), ctx)).toMatchObject({ categoria: 'Servicio doméstico', revisado: false });
+  });
+});

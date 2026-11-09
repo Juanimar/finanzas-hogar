@@ -72,3 +72,9 @@ export function merchantTotals(movs, categorias, categoria, yyyymm, currency) {
   }
   return [...map.values()].sort((a, b) => b.mes - a.mes || b.anio - a.anio);
 }
+
+/** Distinct mails the script could not read in the 7 days up to `today` (YYYY-MM-DD). */
+export function unreadMailCount(logs, today) {
+  const since = new Date(Date.parse(today) - 7 * 86400000).toISOString().slice(0, 10);
+  return new Set(logs.filter(l => l.evento === 'mail_no_leido' && String(l.fecha_hora).slice(0, 10) >= since).map(l => l.ref)).size;
+}

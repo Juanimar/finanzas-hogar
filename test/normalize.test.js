@@ -17,6 +17,7 @@ describe('normalizeComercio', () => {
 describe('tokens', () => {
   it('drops generic words', () => {
     expect(tokens('PEDIDOSYA ENVIO')).toEqual(['PEDIDOSYA']);
-    expect(tokens('DEVOTO EXPRESS')).toEqual(['DEVOTO', 'EXPRESS']);
+    expect(tokens('DEVOTO EXPRESS')).toEqual(['DEVOTO']);
+    expect(tokens('FREDDO AROCENA')).toEqual(['FREDDO', 'AROCENA']);
   });
 });

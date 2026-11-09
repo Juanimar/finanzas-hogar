@@ -44,7 +44,10 @@ export function learnFromEdit(mov, edit, { reglas, cuentas }, now) {
 
 export function consolidate(reglas, now) {
   const byToken = new Map();
+  const seen = new Set();
   for (const r of reglas.filter(x => x.tipo === 'exacta')) {
+    if (seen.has(r.patron)) continue; // count distinct merchants, not duplicate rules
+    seen.add(r.patron);
     for (const t of new Set(tokens(r.patron))) {
       if (t.length < 4) continue;
       if (!byToken.has(t)) byToken.set(t, []);

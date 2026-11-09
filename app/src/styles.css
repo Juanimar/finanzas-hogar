@@ -65,3 +65,4 @@ nav button.on { color: var(--green); font-weight: 600; background: var(--soft); 
 .login { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; }
 .login h1 { margin: 0; } .error { color: #a4462e; }
 .done { font-size: 48px; color: var(--green); margin-top: 40px; }
+.warn { background: #fbeee0; border-color: #f0dcc4; }

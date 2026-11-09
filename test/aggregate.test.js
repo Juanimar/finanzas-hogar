@@ -58,3 +58,17 @@ describe('merchantTotals', () => {
     expect(merchantTotals(movs, cats, 'Supermercado', '2026-11', 'UYU')).toEqual([{ comercio: 'Devoto', mes: 1500, anio: 1800 }]);
   });
 });
+
+describe('unreadMailCount', () => {
+  it('counts distinct unread mails in the last 7 days', async () => {
+    const { unreadMailCount } = await import('../src/core/aggregate.js');
+    const logs = [
+      { fecha_hora: '2026-11-08 06:00:00', evento: 'mail_no_leido', ref: 'a' },
+      { fecha_hora: '2026-11-09 06:00:00', evento: 'mail_no_leido', ref: 'a' },
+      { fecha_hora: '2026-11-09 06:00:00', evento: 'mail_no_leido', ref: 'b' },
+      { fecha_hora: '2026-10-20 06:00:00', evento: 'mail_no_leido', ref: 'old' },
+      { fecha_hora: '2026-11-09 06:00:00', evento: 'ejecucion', ref: '' },
+    ];
+    expect(unreadMailCount(logs, '2026-11-09')).toBe(2);
+  });
+});

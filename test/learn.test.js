@@ -52,3 +52,13 @@ describe('consolidate', () => {
     expect(consolidate([ex('DEVOTO A', 'Supermercado'), ex('DEVOTO B', 'Supermercado'), { tipo: 'contiene', patron: 'DEVOTO', categoria: 'Casa' }], NOW)).toEqual([]);
   });
 });
+
+describe('consolidate — review fixes', () => {
+  const ex = (patron, categoria) => ({ tipo: 'exacta', patron, categoria });
+  it('duplicate copies of one merchant do not count as two', () => {
+    expect(consolidate([ex('KIOSCO PEPE', 'Casa'), ex('KIOSCO PEPE', 'Casa')], NOW)).toEqual([]);
+  });
+  it('generic retail words never group', () => {
+    expect(consolidate([ex('FOO EXPRESS', 'Casa'), ex('BAR EXPRESS', 'Casa'), ex('ACME SHOP', 'Casa'), ex('ZETA SHOP', 'Casa'), ex('UNO ONLINE', 'Casa'), ex('DOS ONLINE', 'Casa')], NOW)).toEqual([]);
+  });
+});

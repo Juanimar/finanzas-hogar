@@ -63,3 +63,22 @@ describe('fillMissingRates', () => {
     expect(changed).toEqual([expect.objectContaining({ id: 'a', cotizacion: 40, monto_uyu: 800 })]);
   });
 });
+
+describe('processMessages — duplicate notices', () => {
+  it('flags the same purchase arriving in two different mails', () => {
+    const st = fakeStore();
+    st.existing = [];
+    st.appendMovimientos = movs => { movs.forEach(m => st.ids.add(m.id)); st.rows.push(...movs); st.existing.push(...movs); };
+    processMessages([fx.creditoUyu], st, rate40, NOW);
+    processMessages([{ ...fx.creditoUyu, id: 'm1-fwd', subject: 'Fwd: ' + fx.creditoUyu.subject }], st, rate40, NOW);
+    expect(st.rows).toHaveLength(2);
+    expect(st.rows[1]).toMatchObject({ revisado: false, nota: expect.stringContaining('duplicado') });
+    expect(st.rows[0].revisado).toBe(true);
+  });
+  it('flags duplicates inside the same batch', () => {
+    const st = fakeStore();
+    st.existing = [];
+    processMessages([fx.debito, { ...fx.debito, id: 'm3b' }], st, rate40, NOW);
+    expect(st.rows[1]).toMatchObject({ revisado: false });
+  });
+});

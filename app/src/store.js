@@ -5,7 +5,7 @@ import { pickRate, computeAmounts } from '../../src/core/money.js';
 import { nowMontevideoIso } from '../../src/core/dates.js';
 
 export function createStore(client) {
-  let state = { loading: true, error: null, movs: [], reglas: [], cuentas: [], categorias: [], cotizaciones: [] };
+  let state = { loading: true, error: null, movs: [], reglas: [], cuentas: [], categorias: [], cotizaciones: [], logs: [] };
   const subs = new Set();
   const set = patch => { state = { ...state, ...patch }; subs.forEach(f => f(state)); };
 
@@ -20,8 +20,12 @@ export function createStore(client) {
     return [...list, added];
   }
 
-  async function guard(fn) {
-    try { await fn(); } catch (e) { set({ error: e.message }); if (e.code === 401) throw e; }
+  // Writes run one at a time so each sees the rules/accounts the previous one created.
+  let queue = Promise.resolve();
+  function guard(fn) {
+    const run = queue.then(fn).catch(e => { set({ error: e.message }); });
+    queue = run;
+    return run;
   }
 
   return {
@@ -32,24 +36,30 @@ export function createStore(client) {
     async load() {
       set({ loading: true, error: null });
       try {
-        const [movs, reglas, cuentas, categorias, cotizaciones] = await Promise.all(
-          ['movimientos', 'reglas', 'cuentas', 'categorias', 'cotizaciones'].map(k => client.readTab(k)),
+        const [movs, reglas, cuentas, categorias, cotizaciones, logs] = await Promise.all(
+          ['movimientos', 'reglas', 'cuentas', 'categorias', 'cotizaciones', 'log'].map(k => client.readTab(k).catch(e => (k === 'log' ? [] : Promise.reject(e)))),
         );
         set({
-          loading: false, movs, reglas, cuentas, cotizaciones,
+          loading: false, movs, reglas, cuentas, cotizaciones, logs,
           categorias: categorias.filter(c => c.activa !== false).sort((a, b) => a.orden - b.orden),
         });
       } catch (e) { set({ loading: false, error: e.message }); if (e.code === 401) throw e; }
     },
 
     /** Confirm or correct a movement; learns a rule/account and resolves similar pending ones. */
-    async review(mov, edit) {
-      await guard(async () => {
+    review(movIn, edit) {
+      return guard(async () => {
+        const mov = state.movs.find(m => m.id === movIn.id) || movIn;
         const now = nowMontevideoIso();
         const { reglaUpsert, cuentaUpsert } = learnFromEdit(mov, edit, state, now);
         let { reglas, cuentas } = state;
-        if (reglaUpsert) reglas = await upsert('reglas', reglas, reglaUpsert, r => r.tipo === 'exacta' && r.patron === reglaUpsert.patron);
-        if (cuentaUpsert) cuentas = await upsert('cuentas', cuentas, cuentaUpsert, c => String(c.numero) === cuentaUpsert.numero);
+        // Optimistic: apply the learned rule locally first so the UI resolves siblings immediately.
+        const local = (list, obj, match) => (obj ? (list.some(match) ? list.map(x => (match(x) ? { ...x, ...obj } : x)) : [...list, obj]) : list);
+        const mRegla = r => r.tipo === 'exacta' && reglaUpsert && r.patron === reglaUpsert.patron;
+        const mCuenta = c => cuentaUpsert && String(c.numero) === cuentaUpsert.numero;
+        set({ reglas: local(reglas, reglaUpsert, mRegla), cuentas: local(cuentas, cuentaUpsert, mCuenta) });
+        if (reglaUpsert) reglas = await upsert('reglas', reglas, reglaUpsert, mRegla);
+        if (cuentaUpsert) cuentas = await upsert('cuentas', cuentas, cuentaUpsert, mCuenta);
 
         const changedSomething = ['categoria', 'quien', 'descripcion'].some(k => edit[k] !== undefined && edit[k] !== mov[k]);
         const updated = {
@@ -76,8 +86,8 @@ export function createStore(client) {
       return c.clasificado_por === 'pendiente' ? null : c;
     },
 
-    async addManual({ fecha, monto, moneda, descripcion, categoria, quien }) {
-      await guard(async () => {
+    addManual({ fecha, monto, moneda, descripcion, categoria, quien }) {
+      return guard(async () => {
         const now = nowMontevideoIso();
         const rate = pickRate(state.cotizaciones, fecha)?.usd_uyu || '';
         const mov = {
