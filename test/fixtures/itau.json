@@ -1,0 +1,32 @@
+{
+  "creditoUyu": {
+    "id": "m1", "date": "2026-11-08T19:54:30Z",
+    "subject": "Aviso de consumo aprobado con tarjeta de crédito",
+    "body": "| |\n| |\n| ### Aviso de consumo aprobado con tarjeta de crédito Se aprobó un consumo con su tarjeta de crédito Detalles: VISA nro. ***1111 Importe: 3251.0 UYU Comercio: MERPAGO*MACROMERCADO MONTE Además ingresando con tu documento y contraseña, a www.itau.com.uy podés ver el detalle de todos tus movimientos. |\n| Itaú |"
+  },
+  "creditoUsd": {
+    "id": "m2", "date": "2026-10-27T02:31:14Z",
+    "subject": "Aviso de consumo aprobado con tarjeta de crédito",
+    "body": "| ### Aviso de consumo aprobado con tarjeta de crédito Se aprobó un consumo con su tarjeta de crédito Detalles: VISA nro. ***1111 Importe: 20.0 USD Comercio: ANTHROPIC* CLAUDE SUB +1415 Además ingresando con tu documento y contraseña |"
+  },
+  "debito": {
+    "id": "m3", "date": "2026-11-06T23:21:58Z",
+    "subject": "Aviso de consumo aprobado con tarjeta de débito",
+    "body": "| ### Aviso de consumo aprobado con tarjeta de débito Se aprobo un consumo de su tarjeta Visa terminada en 2222 . Realizado en DEVOTO EXPRESS VIS3 Monto: 832.71 Pesos. Si no fuiste tú comunícate al 1784. Además ingresando |"
+  },
+  "transferencia": {
+    "id": "m4", "date": "2026-11-07T12:28:18Z",
+    "subject": "Aviso transferencia realizada",
+    "body": "| ### Aviso de transferencia realizada Transferencia realizada. Detalles: Transferencia realizada desde la cuenta ****3333 Importe: 500.00 URGP Cuenta destino: 1234567 Banco/Institución destino: Itau Además ingresando con tu documento |"
+  },
+  "transferenciaOca": {
+    "id": "m5", "date": "2026-10-30T21:27:10Z",
+    "subject": "Aviso transferencia realizada",
+    "body": "Transferencia realizada desde la cuenta ****3333 Importe: 140000.00 URGP Cuenta destino: 7654321 Banco/Institución destino: OCA Blue Además ingresando"
+  },
+  "pago": {
+    "id": "m6", "date": "2026-10-30T21:26:21Z",
+    "subject": "Aviso de pago de tarjeta de credito",
+    "body": "| Aviso de pago de tarjeta de credito | |\n| Se ha confirmado el pago por internet de una tarjeta Visa terminada en 1111. Pago en pesos: 39,285.84 pesos Pago en dólares: 456.31 dólares Si no lo solicitaste comunícate inmediatamente con Itaú al 1784. | |"
+  }
+}
