@@ -8,6 +8,7 @@ import { Home } from './ui/Home.jsx';
 import { Review } from './ui/Review.jsx';
 import { Categories } from './ui/Categories.jsx';
 import { Movements } from './ui/Movements.jsx';
+import { Year } from './ui/Year.jsx';
 import { Editor } from './ui/Editor.jsx';
 import { NewEntry } from './ui/NewEntry.jsx';
 import { Sheet } from './ui/Sheet.jsx';
@@ -71,9 +72,10 @@ function App() {
       {view.name === 'revisar' && <Review {...common} />}
       {view.name === 'categorias' && <Categories {...common} />}
       {view.name === 'movs' && <Movements {...common} />}
+      {view.name === 'anio' && <Year {...common} onPickMonth={m => { setMonth(m); go('inicio'); }} onYear={d => setMonth(shiftMonth(month, 12 * d))} />}
       {view.name !== 'revisar' && <button class="fab" onClick={() => setAdding(true)} aria-label="Agregar gasto">+</button>}
       <nav>
-        {[['inicio', 'Inicio'], ['revisar', `Revisar${pend ? ` (${pend})` : ''}`], ['categorias', 'Categorías'], ['movs', 'Movimientos']].map(([k, l]) => (
+        {[['inicio', 'Inicio'], ['anio', 'Año'], ['revisar', `Revisar${pend ? ` (${pend})` : ''}`], ['categorias', 'Categorías'], ['movs', 'Movim.']].map(([k, l]) => (
           <button key={k} class={view.name === k ? 'on' : ''} onClick={() => go(k)}>{l}</button>
         ))}
       </nav>

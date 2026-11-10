@@ -93,3 +93,26 @@ describe('ingresos y tasa de ahorro', () => {
     expect(monthSummary([], [], '2026-11', 'UYU').tasaAhorro).toBeNull();
   });
 });
+
+describe('yearSummary', () => {
+  it('12 meses con fijos, variables, ahorro e ingresos', async () => {
+    const { yearSummary } = await import('../src/core/aggregate.js');
+    const { SEED_CATEGORIAS } = await import('../src/core/seed.js');
+    const b = { tipo: 'consumo_credito', clasificado_por: 'regla_exacta', revisado: true };
+    const movs = [
+      { ...b, fecha: '2026-01-10', categoria: 'Supermercado', monto_uyu: 100, monto_usd: 2.5 },
+      { ...b, fecha: '2026-01-11', categoria: 'Suscripciones', monto_uyu: 50, monto_usd: 1.25 },
+      { ...b, fecha: '2026-03-05', categoria: 'Supermercado', monto_uyu: 300, monto_usd: 7.5 },
+      { ...b, fecha: '2026-03-06', categoria: 'Ahorro/Inversión', monto_uyu: 1000, monto_usd: 25, tipo: 'transferencia' },
+      { ...b, fecha: '2026-03-07', categoria: 'Sueldo', monto_uyu: 5000, monto_usd: 125, tipo: 'manual' },
+      { ...b, fecha: '2025-12-31', categoria: 'Supermercado', monto_uyu: 999, monto_usd: 25 },
+    ];
+    const y = yearSummary(movs, SEED_CATEGORIAS, '2026', 'UYU');
+    expect(y.meses).toHaveLength(12);
+    expect(y.meses[0]).toMatchObject({ mes: '2026-01', fijos: 50, variables: 100, total: 150, ahorro: 0, ingresos: 0 });
+    expect(y.meses[2]).toMatchObject({ total: 300, ahorro: 1000, ingresos: 5000 });
+    expect(y.meses[1].total).toBe(0);
+    expect(y.total).toBe(450);
+    expect(y.promedio).toBe(225); // promedio de los meses con gastos
+  });
+});

@@ -83,3 +83,15 @@ export function unreadMailCount(logs, today) {
   const since = new Date(Date.parse(today) - 7 * 86400000).toISOString().slice(0, 10);
   return new Set(logs.filter(l => l.evento === 'mail_no_leido' && String(l.fecha_hora).slice(0, 10) >= since).map(l => l.ref)).size;
 }
+
+/** One entry per month of `year`, plus total and average over months that have spending. */
+export function yearSummary(movs, categorias, year, currency) {
+  const meses = Array.from({ length: 12 }, (_, i) => {
+    const mes = `${year}-${String(i + 1).padStart(2, '0')}`;
+    const s = monthSummary(movs, categorias, mes, currency);
+    return { mes, fijos: s.porGrupo.Fijos || 0, variables: s.porGrupo.Variables || 0, total: s.total, ahorro: s.ahorro, ingresos: s.ingresos };
+  });
+  const conGasto = meses.filter(m => m.total > 0);
+  const total = r2(meses.reduce((a, m) => a + m.total, 0));
+  return { meses, total, promedio: conGasto.length ? r2(total / conGasto.length) : 0, ahorro: r2(meses.reduce((a, m) => a + m.ahorro, 0)) };
+}

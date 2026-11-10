@@ -66,3 +66,10 @@ nav button.on { color: var(--green); font-weight: 600; background: var(--soft); 
 .login h1 { margin: 0; } .error { color: #a4462e; }
 .done { font-size: 48px; color: var(--green); margin-top: 40px; }
 .warn { background: #fbeee0; border-color: #f0dcc4; }
+.year-head { display: flex; align-items: center; justify-content: center; gap: 12px; } .year-head h2 { margin: 0; }
+.bars { width: 100%; height: 170px; margin-top: 12px; }
+.bar-g { cursor: pointer; }
+.b-var { fill: #8fb3a6; } .b-fijos { fill: #c9a679; } .b-var.cur { fill: var(--green); } .b-fijos.cur { fill: var(--amber); }
+.bar-lbl { font-size: 10px; fill: var(--muted); }
+.avg-line { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; opacity: .45; }
+.dot.var { background: #8fb3a6; height: 8px; } .dot.fijos { background: #c9a679; height: 8px; margin-left: 10px; } .dot.avgd { background: none; border-top: 2px dashed #777; margin-left: 10px; }
