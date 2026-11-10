@@ -99,7 +99,6 @@ export function yearSummary(movs, categorias, year, currency) {
     const prev = cats.get(c.categoria) || { ...c, total: 0 };
     cats.set(c.categoria, { ...prev, total: r2(prev.total + c.total) });
   }
-  for (const m of meses) delete m.porCategoria;
   const ahorro = sum('ahorro'), ingresos = sum('ingresos');
   return {
     meses, total, promedio: conGasto.length ? r2(total / conGasto.length) : 0,

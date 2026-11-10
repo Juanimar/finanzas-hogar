@@ -118,5 +118,6 @@ describe('yearSummary', () => {
     expect(y.porCategoria[0]).toMatchObject({ categoria: 'Supermercado', total: 400 });
     expect(y.ingresos).toBe(5000);
     expect(y.tasaAhorro).toBe(20);
+    expect(y.meses[2].porCategoria).toEqual([expect.objectContaining({ categoria: 'Supermercado', total: 300 })]);
   });
 });
