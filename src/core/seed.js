@@ -1,4 +1,4 @@
-export const GRUPOS = ['Fijos', 'Variables', 'No es gasto'];
+export const GRUPOS = ['Fijos', 'Variables', 'No es gasto', 'Ingresos'];
 export const NO_GASTO = ['Ahorro/Inversión', 'Movimiento interno'];
 
 const CATS = {
@@ -8,6 +8,7 @@ const CATS = {
     'Diversión', 'Regalos y Cumpleaños', 'Donación', 'Viajes', 'Otros',
   ],
   'No es gasto': NO_GASTO,
+  Ingresos: ['Sueldo', 'Otros ingresos'],
 };
 
 export const SEED_CATEGORIAS = Object.entries(CATS).flatMap(([grupo, nombres]) =>

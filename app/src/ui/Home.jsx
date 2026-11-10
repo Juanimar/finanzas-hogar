@@ -42,10 +42,10 @@ export function Home({ state, month, currency, go, isCurrentMonth }) {
         <button class="card stat" onClick={() => go('categorias', { grupo: 'Fijos' })}><div class="muted small">Fijos</div><div class="mid">{fmt(s.porGrupo.Fijos, currency)}</div></button>
         <button class="card stat" onClick={() => go('categorias', { grupo: 'Variables' })}><div class="muted small">Variables</div><div class="mid">{fmt(s.porGrupo.Variables, currency)}</div></button>
       </div>
-      <section class="card">
-        <div class="muted small">Ahorro e inversión del mes</div>
-        <div class="mid">{fmt(s.ahorro, currency)}</div>
-      </section>
+      <div class="row2">
+        <section class="card"><div class="muted small">Ingresos</div><div class="mid">{s.ingresos ? fmt(s.ingresos, currency) : '—'}</div>{!s.ingresos && <div class="small muted">Cargalos con +</div>}</section>
+        <section class="card"><div class="muted small">Ahorro e inversión</div><div class="mid">{fmt(s.ahorro, currency)}</div>{s.tasaAhorro !== null && <div class="small muted">{s.tasaAhorro}% de los ingresos</div>}</section>
+      </div>
       <section class="card">
         <div class="muted small">Cómo se clasificó este mes</div>
         <div class="bar">

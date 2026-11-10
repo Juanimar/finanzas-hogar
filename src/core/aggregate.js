@@ -8,8 +8,11 @@ export function catIndex(categorias) {
 
 const grupoOf = (m, ix) => ix.get(m.categoria)?.grupo || 'Variables';
 
+const INGRESOS = new Set(['Sueldo', 'Otros ingresos']);
+const isIngreso = (m, ix) => grupoOf(m, ix) === 'Ingresos' || INGRESOS.has(m.categoria);
+
 export function isGasto(mov, ix) {
-  return mov.tipo !== 'pago_tarjeta' && grupoOf(mov, ix) !== 'No es gasto';
+  return mov.tipo !== 'pago_tarjeta' && grupoOf(mov, ix) !== 'No es gasto' && !isIngreso(mov, ix);
 }
 
 export function monthSummary(movs, categorias, yyyymm, currency) {
@@ -27,6 +30,8 @@ export function monthSummary(movs, categorias, yyyymm, currency) {
   const porCategoria = [...porCat].map(([categoria, total]) => ({ categoria, grupo: grupoOf({ categoria }, ix), total }))
     .sort((a, b) => b.total - a.total);
   const ahorro = r2(month.filter(m => m.categoria === 'Ahorro/Inversión').reduce((s, m) => s + amount(m, currency), 0));
+  const ingresos = r2(month.filter(m => isIngreso(m, ix)).reduce((s, m) => s + amount(m, currency), 0));
+  const tasaAhorro = ingresos ? Math.round((ahorro / ingresos) * 100) : null;
 
   const counted = month.filter(m => m.tipo !== 'pago_tarjeta');
   const n = counted.length;
@@ -38,7 +43,7 @@ export function monthSummary(movs, categorias, yyyymm, currency) {
 
   return {
     total: r2(gastos.reduce((s, m) => s + amount(m, currency), 0)),
-    porGrupo, porCategoria, ahorro,
+    porGrupo, porCategoria, ahorro, ingresos, tasaAhorro,
     pendientes: movs.filter(m => m.revisado === false).length,
     metric,
   };

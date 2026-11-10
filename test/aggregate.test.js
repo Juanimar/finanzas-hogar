@@ -72,3 +72,24 @@ describe('unreadMailCount', () => {
     expect(unreadMailCount(logs, '2026-11-09')).toBe(2);
   });
 });
+
+describe('ingresos y tasa de ahorro', () => {
+  it('los ingresos no son gasto y la tasa de ahorro se calcula', async () => {
+    const { monthSummary } = await import('../src/core/aggregate.js');
+    const { SEED_CATEGORIAS } = await import('../src/core/seed.js');
+    const base = { tipo: 'manual', clasificado_por: 'manual', revisado: true };
+    const movs = [
+      { ...base, fecha: '2026-11-01', categoria: 'Sueldo', monto_uyu: 200000, monto_usd: 5000 },
+      { ...base, fecha: '2026-11-02', categoria: 'Supermercado', monto_uyu: 50000, monto_usd: 1250 },
+      { ...base, fecha: '2026-11-03', categoria: 'Ahorro/Inversión', monto_uyu: 60000, monto_usd: 1500, tipo: 'transferencia' },
+    ];
+    const s = monthSummary(movs, SEED_CATEGORIAS, '2026-11', 'UYU');
+    expect(s.total).toBe(50000);
+    expect(s.ingresos).toBe(200000);
+    expect(s.tasaAhorro).toBe(30);
+  });
+  it('sin ingresos la tasa es null', async () => {
+    const { monthSummary } = await import('../src/core/aggregate.js');
+    expect(monthSummary([], [], '2026-11', 'UYU').tasaAhorro).toBeNull();
+  });
+});

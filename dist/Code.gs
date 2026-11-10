@@ -111,7 +111,8 @@ var FH = (() => {
       "Viajes",
       "Otros"
     ],
-    "No es gasto": NO_GASTO
+    "No es gasto": NO_GASTO,
+    Ingresos: ["Sueldo", "Otros ingresos"]
   };
   var SEED_CATEGORIAS = Object.entries(CATS).flatMap(
     ([grupo, nombres]) => nombres.map((nombre) => ({ nombre, grupo, activa: true }))

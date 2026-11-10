@@ -26,10 +26,11 @@ describe('schema', () => {
 });
 
 describe('seeds', () => {
-  it('has 19 categories in the 3 groups', () => {
-    expect(SEED_CATEGORIAS).toHaveLength(19);
+  it('has 21 categories in the 4 groups', () => {
+    expect(SEED_CATEGORIAS).toHaveLength(21);
     for (const c of SEED_CATEGORIAS) expect(GRUPOS).toContain(c.grupo);
     expect(SEED_CATEGORIAS.filter(c => c.grupo === 'No es gasto').map(c => c.nombre)).toEqual(NO_GASTO);
+    expect(SEED_CATEGORIAS.filter(c => c.grupo === 'Ingresos').map(c => c.nombre)).toEqual(['Sueldo', 'Otros ingresos']);
   });
 
   it('every seed rule points to an existing category', () => {
