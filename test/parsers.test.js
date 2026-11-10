@@ -70,3 +70,14 @@ describe('monedas raras de Itaú', () => {
     expect(parseItauEmail(m).movs[0]).toMatchObject({ monto_orig: 143, moneda: 'USD' });
   });
 });
+
+describe('formato HTML real (espacio después de los asteriscos)', () => {
+  it('crédito con "*** 1111"', () => {
+    const r = parseItauEmail({ ...fx.creditoUyu, body: 'Detalles: VISA nro. *** 1111 Importe: 5330.12 UYU Comercio: MERPAGO*PHILIPS MONTE Además ingresando' });
+    expect(r.movs[0]).toMatchObject({ medio: 'Visa 1111', monto_orig: 5330.12, comercio_raw: 'MERPAGO*PHILIPS MONTE' });
+  });
+  it('transferencia con "**** 3333"', () => {
+    const r = parseItauEmail({ ...fx.transferencia, body: 'Transferencia realizada desde la cuenta **** 3333 Importe: 500.00 URGP Cuenta destino: 1234567 Banco/Institución destino: Itau Además ingresando' });
+    expect(r.movs[0]).toMatchObject({ medio: 'Cuenta 3333', cuenta_destino: '1234567' });
+  });
+});

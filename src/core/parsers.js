@@ -18,7 +18,7 @@ const PARSERS = [
   {
     subject: /consumo aprobado con tarjeta de cr[eé]dito/i,
     tipo: 'consumo_credito',
-    re: new RegExp(`nro\\. \\*+(\\d{4}) Importe: ${NUM} (\\S+) Comercio: (.+?) Adem[aá]s`, 'i'),
+    re: new RegExp(`nro\\. \\*+\\s*(\\d{4}) Importe: ${NUM} (\\S+) Comercio: (.+?) Adem[aá]s`, 'i'),
     build: m => [{ medio: `Visa ${m[1]}`, monto: m[2], moneda: m[3], comercio_raw: m[4] }],
   },
   {
@@ -30,7 +30,7 @@ const PARSERS = [
   {
     subject: /transferencia realizada/i,
     tipo: 'transferencia',
-    re: new RegExp(`desde la cuenta \\*+(\\d{4}) Importe: ${NUM} (\\S+) Cuenta destino: (\\S+) Banco/Instituci[oó]n destino: (.+?) Adem[aá]s`, 'i'),
+    re: new RegExp(`desde la cuenta \\*+\\s*(\\d{4}) Importe: ${NUM} (\\S+) Cuenta destino: (\\S+) Banco/Instituci[oó]n destino: (.+?) Adem[aá]s`, 'i'),
     build: m => [{ medio: `Cuenta ${m[1]}`, monto: m[2], moneda: m[3], cuenta_destino: m[4], banco_destino: m[5] }],
   },
   {
