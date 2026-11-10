@@ -5,7 +5,7 @@ import { QUIENES } from './format.js';
 export function Editor({ mov, categorias, onSave, saveLabel = 'Confirmar' }) {
   const [categoria, setCategoria] = useState(mov.categoria === 'Otros' && mov.clasificado_por === 'pendiente' ? '' : mov.categoria);
   const [quien, setQuien] = useState(mov.quien || 'Compartido');
-  const [nombre, setNombre] = useState(mov.tipo === 'transferencia' && mov.clasificado_por === 'pendiente' ? '' : mov.descripcion);
+  const [nombre, setNombre] = useState(String(mov.descripcion || '').startsWith('Transferencia a') ? '' : mov.descripcion);
   const grupos = ['Variables', 'Fijos', 'No es gasto'];
   const isTransfer = mov.tipo === 'transferencia';
   return (

@@ -40,6 +40,10 @@ export function classify(mov, { reglas, cuentas }) {
 
   if (mov.tipo === 'transferencia') {
     const c = cuentas.find(x => String(x.numero) === String(mov.cuenta_destino));
+    if (c && c.tipo === 'tercero' && !c.categoria) {
+      // Known payee, category not decided yet: show the name, ask for the category once.
+      return { categoria: 'Otros', quien: c.quien || quien, descripcion: c.nombre || `Cuenta ${c.numero}`, clasificado_por: 'pendiente', revisado: false };
+    }
     if (c) {
       const categoria = c.tipo === 'propia_ahorro' ? 'Ahorro/Inversión'
         : c.tipo === 'propia_interna' ? 'Movimiento interno'

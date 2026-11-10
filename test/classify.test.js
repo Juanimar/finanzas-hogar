@@ -87,3 +87,10 @@ describe('classify — review fixes', () => {
     expect(classify(transf('3111225', 'Midinero'), ctx)).toMatchObject({ categoria: 'Servicio doméstico', revisado: false });
   });
 });
+
+describe('classify — cuentas con nombre pero sin categoría', () => {
+  it('usa el nombre y deja la categoría para revisar', () => {
+    const ctx3 = { reglas: [], cuentas: [{ numero: '2443635', tipo: 'tercero', nombre: 'Bena', categoria: '' }] };
+    expect(classify(transf('2443635'), ctx3)).toMatchObject({ descripcion: 'Bena', categoria: 'Otros', clasificado_por: 'pendiente', revisado: false });
+  });
+});

@@ -339,6 +339,9 @@ var FH = (() => {
     }
     if (mov.tipo === "transferencia") {
       const c = cuentas.find((x) => String(x.numero) === String(mov.cuenta_destino));
+      if (c && c.tipo === "tercero" && !c.categoria) {
+        return { categoria: "Otros", quien: c.quien || quien, descripcion: c.nombre || `Cuenta ${c.numero}`, clasificado_por: "pendiente", revisado: false };
+      }
       if (c) {
         const categoria = c.tipo === "propia_ahorro" ? "Ahorro/Inversión" : c.tipo === "propia_interna" ? "Movimiento interno" : c.categoria || "Otros";
         return { categoria, quien: c.quien || quien, descripcion: c.nombre || `Cuenta ${c.numero}`, clasificado_por: "cuenta", revisado: true };
