@@ -7,7 +7,7 @@ export function parseAmount(s) {
 function currency(s) {
   const u = s.toUpperCase();
   if (/^(URGP|UYU|PESOS?|\$)$/.test(u)) return 'UYU';
-  if (/^(USD|U\$S|DOLARES|DÓLARES|DOLAR|DÓLAR)$/.test(u)) return 'USD';
+  if (/^(USD|US\.?D|U\$S|DOLARES|DÓLARES|DOLAR|DÓLAR)$/.test(u)) return 'USD';
   return null;
 }
 

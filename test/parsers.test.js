@@ -63,3 +63,10 @@ describe('parseItauEmail', () => {
     expect(one({ ...fx.debito, subject: 'Fwd: ' + fx.debito.subject })).toHaveLength(1);
   });
 });
+
+describe('monedas raras de Itaú', () => {
+  it('transferencia en US.D → USD', () => {
+    const m = { ...fx.transferencia, body: fx.transferencia.body.replace('500.00 URGP', '143.00 US.D') };
+    expect(parseItauEmail(m).movs[0]).toMatchObject({ monto_orig: 143, moneda: 'USD' });
+  });
+});
