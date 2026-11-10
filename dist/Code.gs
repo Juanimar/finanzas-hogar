@@ -28,7 +28,8 @@ var FH = (() => {
     onOpen: () => onOpen,
     procesarAhora: () => procesarAhora,
     procesarDiario: () => procesarDiario,
-    reconstruir: () => reconstruir
+    reconstruir: () => reconstruir,
+    sincronizarInversiones: () => sincronizarInversiones
   });
 
   // src/core/schema.js
@@ -617,6 +618,57 @@ var FH = (() => {
     return { movs, omitidas };
   }
 
+  // src/core/inversiones.js
+  var DAY2 = 864e5;
+  var usd = (s) => Number(String(s != null ? s : "").replace(/[$\s]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
+  function parseDate(s) {
+    const m = String(s || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : null;
+  }
+  function inversionesToMovs(rows, existentes, now) {
+    const start = rows.findIndex((r2) => String(r2[2]).trim() === "Depósitos" && String(r2[3]).trim() === "USD");
+    if (start < 0) return [];
+    const ids = new Set(existentes.map((m) => String(m.id)));
+    const ahorros = existentes.filter((m) => m.categoria === "Ahorro/Inversión" && m.moneda === "USD");
+    const out = [];
+    for (const r2 of rows.slice(start + 1)) {
+      const fecha = parseDate(r2[2]);
+      const monto = usd(r2[3]);
+      if (!fecha || !(monto > 0)) continue;
+      const id = `inv-${fecha}-${monto}`;
+      if (ids.has(id)) continue;
+      const t = Date.parse(fecha);
+      if (ahorros.some((m) => Number(m.monto_orig) === monto && Math.abs(Date.parse(m.fecha) - t) <= 3 * DAY2)) continue;
+      ids.add(id);
+      out.push({
+        id,
+        fecha,
+        tipo: "manual",
+        medio: "Planilla Inversiones",
+        comercio_raw: "Depósito inversión",
+        comercio: "DEPOSITO INVERSION",
+        cuenta_destino: "",
+        banco_destino: "",
+        descripcion: "Depósito inversión (BROU)",
+        monto_orig: monto,
+        moneda: "USD",
+        cotizacion: "",
+        monto_uyu: "",
+        monto_usd: monto,
+        categoria: "Ahorro/Inversión",
+        quien: "Compartido",
+        clasificado_por: "manual",
+        revisado: true,
+        bloqueado: true,
+        origen: "historico",
+        nota: "Importado de Inversiones",
+        creado: now,
+        modificado: now
+      });
+    }
+    return out;
+  }
+
   // apps-script/main.js
   var SENDER = "comunicaciones@itau.com.uy";
   var LABEL_OK = "Finanzas/Procesado";
@@ -734,7 +786,20 @@ var FH = (() => {
     for (const m of msgs) (revisar.has(m.id) ? bad : ok).addToThread(m.thread);
     return result;
   }
+  function syncInversiones() {
+    const sh = SpreadsheetApp.getActive().getSheetByName("Inversiones");
+    if (!sh) return 0;
+    const nuevos = inversionesToMovs(sh.getDataRange().getDisplayValues(), readAll(TABS.movimientos), nowMontevideoIso());
+    append(TABS.movimientos, nuevos);
+    if (nuevos.length) log("info", "inversiones", `depositos_nuevos=${nuevos.length}`);
+    return nuevos.length;
+  }
   function mantenimiento() {
+    try {
+      syncInversiones();
+    } catch (e) {
+      log("aviso", "inversiones", e.message);
+    }
     const reglas = readAll(TABS.reglas);
     const nuevas = consolidate(reglas, nowMontevideoIso());
     append(TABS.reglas, nuevas);
@@ -885,8 +950,12 @@ var FH = (() => {
     withLock(mantenimiento);
     return { importados: nuevos.length, omitidas };
   }
+  function sincronizarInversiones() {
+    const n = withLock(mantenimiento);
+    return n;
+  }
   function onOpen() {
-    SpreadsheetApp.getUi().createMenu("Finanzas").addItem("Procesar ahora", "procesarAhora").addItem("Consolidar reglas", "consolidarReglas").addItem("Reconstruir historial…", "reconstruir").addItem("Importar planilla vieja (hasta 2025)", "importarPlanillaVieja").addSeparator().addItem("Configurar (primera vez)", "configurar").addToUi();
+    SpreadsheetApp.getUi().createMenu("Finanzas").addItem("Procesar ahora", "procesarAhora").addItem("Consolidar reglas", "consolidarReglas").addItem("Reconstruir historial…", "reconstruir").addItem("Importar planilla vieja (hasta 2025)", "importarPlanillaVieja").addItem("Sincronizar Inversiones", "sincronizarInversiones").addSeparator().addItem("Configurar (primera vez)", "configurar").addToUi();
   }
   return __toCommonJS(main_exports);
 })();
@@ -899,3 +968,4 @@ function continuarReconstruccion() { return FH.continuarReconstruccion.apply(nul
 function configurar() { return FH.configurar.apply(null, arguments); }
 function onOpen() { return FH.onOpen.apply(null, arguments); }
 function importarPlanillaVieja() { return FH.importarPlanillaVieja.apply(null, arguments); }
+function sincronizarInversiones() { return FH.sincronizarInversiones.apply(null, arguments); }

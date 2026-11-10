@@ -8,6 +8,7 @@ import { pickRate, buildBcuRequest, parseBcuResponse, BCU_URL } from '../src/cor
 import { nowMontevideoIso } from '../src/core/dates.js';
 import { htmlToText } from '../src/core/html.js';
 import { importLegacyRows } from '../src/core/legacy.js';
+import { inversionesToMovs } from '../src/core/inversiones.js';
 
 const SENDER = 'comunicaciones@itau.com.uy';
 const LABEL_OK = 'Finanzas/Procesado';
@@ -137,7 +138,17 @@ function runBatch(msgs, origen) {
 
 // ---------- Maintenance ----------
 
+function syncInversiones() {
+  const sh = SpreadsheetApp.getActive().getSheetByName('Inversiones');
+  if (!sh) return 0;
+  const nuevos = inversionesToMovs(sh.getDataRange().getDisplayValues(), readAll(TABS.movimientos), nowMontevideoIso());
+  append(TABS.movimientos, nuevos);
+  if (nuevos.length) log('info', 'inversiones', `depositos_nuevos=${nuevos.length}`);
+  return nuevos.length;
+}
+
 function mantenimiento() {
+  try { syncInversiones(); } catch (e) { log('aviso', 'inversiones', e.message); }
   const reglas = readAll(TABS.reglas);
   const nuevas = consolidate(reglas, nowMontevideoIso());
   append(TABS.reglas, nuevas);
@@ -278,12 +289,18 @@ export function importarPlanillaVieja() {
   return { importados: nuevos.length, omitidas };
 }
 
+export function sincronizarInversiones() {
+  const n = withLock(mantenimiento);
+  return n;
+}
+
 export function onOpen() {
   SpreadsheetApp.getUi().createMenu('Finanzas')
     .addItem('Procesar ahora', 'procesarAhora')
     .addItem('Consolidar reglas', 'consolidarReglas')
     .addItem('Reconstruir historial…', 'reconstruir')
     .addItem('Importar planilla vieja (hasta 2025)', 'importarPlanillaVieja')
+    .addItem('Sincronizar Inversiones', 'sincronizarInversiones')
     .addSeparator()
     .addItem('Configurar (primera vez)', 'configurar')
     .addToUi();
