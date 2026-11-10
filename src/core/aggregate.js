@@ -89,9 +89,22 @@ export function yearSummary(movs, categorias, year, currency) {
   const meses = Array.from({ length: 12 }, (_, i) => {
     const mes = `${year}-${String(i + 1).padStart(2, '0')}`;
     const s = monthSummary(movs, categorias, mes, currency);
-    return { mes, fijos: s.porGrupo.Fijos || 0, variables: s.porGrupo.Variables || 0, total: s.total, ahorro: s.ahorro, ingresos: s.ingresos };
+    return { mes, fijos: s.porGrupo.Fijos || 0, variables: s.porGrupo.Variables || 0, total: s.total, ahorro: s.ahorro, ingresos: s.ingresos, porCategoria: s.porCategoria };
   });
   const conGasto = meses.filter(m => m.total > 0);
   const total = r2(meses.reduce((a, m) => a + m.total, 0));
-  return { meses, total, promedio: conGasto.length ? r2(total / conGasto.length) : 0, ahorro: r2(meses.reduce((a, m) => a + m.ahorro, 0)) };
+  const sum = k => r2(meses.reduce((a, m) => a + m[k], 0));
+  const cats = new Map();
+  for (const m of meses) for (const c of m.porCategoria) {
+    const prev = cats.get(c.categoria) || { ...c, total: 0 };
+    cats.set(c.categoria, { ...prev, total: r2(prev.total + c.total) });
+  }
+  for (const m of meses) delete m.porCategoria;
+  const ahorro = sum('ahorro'), ingresos = sum('ingresos');
+  return {
+    meses, total, promedio: conGasto.length ? r2(total / conGasto.length) : 0,
+    porGrupo: { Fijos: sum('fijos'), Variables: sum('variables') },
+    porCategoria: [...cats.values()].sort((a, b) => b.total - a.total),
+    ahorro, ingresos, tasaAhorro: ingresos ? Math.round((ahorro / ingresos) * 100) : null,
+  };
 }

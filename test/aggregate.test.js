@@ -114,5 +114,9 @@ describe('yearSummary', () => {
     expect(y.meses[1].total).toBe(0);
     expect(y.total).toBe(450);
     expect(y.promedio).toBe(225); // promedio de los meses con gastos
+    expect(y.porGrupo).toEqual({ Fijos: 50, Variables: 400 });
+    expect(y.porCategoria[0]).toMatchObject({ categoria: 'Supermercado', total: 400 });
+    expect(y.ingresos).toBe(5000);
+    expect(y.tasaAhorro).toBe(20);
   });
 });

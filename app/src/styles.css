@@ -9,7 +9,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 h2, h3 { margin: 12px 4px 8px; font-weight: 600; } h3 { font-size: 15px; display: flex; justify-content: space-between; }
 .app { max-width: 520px; margin: 0 auto; padding: env(safe-area-inset-top) 0 calc(84px + env(safe-area-inset-bottom)); }
 header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 4px; padding: 10px 12px; background: var(--bg); }
-header .month { flex: 1; text-align: center; font-weight: 600; }
+header .month { flex: 1; text-align: center; font-weight: 600; white-space: nowrap; }
 header .cur { padding: 6px 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-weight: 600; }
 .ghost { padding: 6px 10px; font-size: 20px; color: var(--muted); }
 .screen { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
@@ -73,3 +73,11 @@ nav button.on { color: var(--green); font-weight: 600; background: var(--soft); 
 .bar-lbl { font-size: 10px; fill: var(--muted); }
 .avg-line { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; opacity: .45; }
 .dot.var { background: #8fb3a6; height: 8px; } .dot.fijos { background: #c9a679; height: 8px; margin-left: 10px; } .dot.avgd { background: none; border-top: 2px dashed #777; margin-left: 10px; }
+header .seg { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
+header .seg button { padding: 5px 10px; border-radius: 999px; font-size: 13px; color: var(--muted); }
+header .seg button.on { background: var(--green); color: #fff; font-weight: 600; }
+.catrow { display: grid; grid-template-columns: 8.5em 1fr 6.5em; align-items: center; gap: 10px; width: 100%; padding: 7px 0; text-align: left; }
+.catname { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cattrack { height: 8px; background: var(--soft); border-radius: 999px; overflow: hidden; }
+.catfill { display: block; height: 100%; background: var(--green); border-radius: 999px; }
+.catamt { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; }
