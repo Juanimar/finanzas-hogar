@@ -5,7 +5,7 @@ const CATS = {
   Fijos: ['Vivienda', 'Servicios', 'Servicio doméstico', 'Suscripciones', 'Bancos/Comisiones'],
   Variables: [
     'Supermercado', 'Delivery', 'ComidaSocial', 'Transporte', 'Casa', 'Estética/Cosmética', 'Salud',
-    'Diversión', 'Regalos y Cumpleaños', 'Donación', 'Viajes', 'Otros',
+    'Diversión', 'Regalos y Cumpleaños', 'Donación', 'Viajes', 'Ropa', 'Deporte', 'Educación', 'Otros',
   ],
   'No es gasto': NO_GASTO,
   Ingresos: ['Sueldo', 'Otros ingresos'],

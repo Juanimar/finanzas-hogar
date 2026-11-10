@@ -2,7 +2,7 @@
 import { build } from 'esbuild';
 import { mkdirSync, writeFileSync, copyFileSync } from 'node:fs';
 
-const ENTRY_POINTS = ['procesarDiario', 'procesarAhora', 'consolidarReglas', 'reconstruir', 'continuarReconstruccion', 'configurar', 'onOpen'];
+const ENTRY_POINTS = ['procesarDiario', 'procesarAhora', 'consolidarReglas', 'reconstruir', 'continuarReconstruccion', 'configurar', 'onOpen', 'importarPlanillaVieja'];
 
 const out = await build({
   entryPoints: ['apps-script/main.js'], bundle: true, format: 'iife', globalName: 'FH',

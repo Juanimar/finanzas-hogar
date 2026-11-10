@@ -7,6 +7,7 @@ import { consolidate } from '../src/core/learn.js';
 import { pickRate, buildBcuRequest, parseBcuResponse, BCU_URL } from '../src/core/money.js';
 import { nowMontevideoIso } from '../src/core/dates.js';
 import { htmlToText } from '../src/core/html.js';
+import { importLegacyRows } from '../src/core/legacy.js';
 
 const SENDER = 'comunicaciones@itau.com.uy';
 const LABEL_OK = 'Finanzas/Procesado';
@@ -261,11 +262,28 @@ export function configurar() {
   SpreadsheetApp.getUi().alert('Configuración lista. Completá la pestaña Cuentas y después usá Finanzas → Reconstruir historial.');
 }
 
+export function importarPlanillaVieja() {
+  const sh = SpreadsheetApp.getActive().getSheetByName('Gastos Mensuales');
+  if (!sh) throw new Error('No encuentro la pestaña "Gastos Mensuales"');
+  const rows = sh.getDataRange().getDisplayValues();
+  const { movs, omitidas } = importLegacyRows(rows, { hasta: '2025-12', now: nowMontevideoIso() });
+  const existing = new Set(readAll(TABS.movimientos).map(m => String(m.id)));
+  const nuevos = movs.filter(m => !existing.has(m.id));
+  append(TABS.movimientos, nuevos);
+  const cats = new Set(readAll(TABS.categorias).map(c => c.nombre));
+  const faltan = SEED_CATEGORIAS.filter(c => !cats.has(c.nombre));
+  append(TABS.categorias, faltan);
+  log('info', 'importacion_planilla', `importados=${nuevos.length} omitidos=${omitidas} categorias_nuevas=${faltan.map(c => c.nombre).join(',')}`);
+  withLock(mantenimiento);
+  return { importados: nuevos.length, omitidas };
+}
+
 export function onOpen() {
   SpreadsheetApp.getUi().createMenu('Finanzas')
     .addItem('Procesar ahora', 'procesarAhora')
     .addItem('Consolidar reglas', 'consolidarReglas')
     .addItem('Reconstruir historial…', 'reconstruir')
+    .addItem('Importar planilla vieja (hasta 2025)', 'importarPlanillaVieja')
     .addSeparator()
     .addItem('Configurar (primera vez)', 'configurar')
     .addToUi();

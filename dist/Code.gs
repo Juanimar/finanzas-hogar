@@ -10,9 +10,9 @@ var FH = (() => {
   };
   var __copyProps = (to, from, except, desc) => {
     if (from && typeof from === "object" || typeof from === "function") {
-      for (let key of __getOwnPropNames(from))
-        if (!__hasOwnProp.call(to, key) && key !== except)
-          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+      for (let key2 of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key2) && key2 !== except)
+          __defProp(to, key2, { get: () => from[key2], enumerable: !(desc = __getOwnPropDesc(from, key2)) || desc.enumerable });
     }
     return to;
   };
@@ -24,6 +24,7 @@ var FH = (() => {
     configurar: () => configurar,
     consolidarReglas: () => consolidarReglas,
     continuarReconstruccion: () => continuarReconstruccion,
+    importarPlanillaVieja: () => importarPlanillaVieja,
     onOpen: () => onOpen,
     procesarAhora: () => procesarAhora,
     procesarDiario: () => procesarDiario,
@@ -109,6 +110,9 @@ var FH = (() => {
       "Regalos y Cumpleaños",
       "Donación",
       "Viajes",
+      "Ropa",
+      "Deporte",
+      "Educación",
       "Otros"
     ],
     "No es gasto": NO_GASTO,
@@ -524,6 +528,95 @@ var FH = (() => {
     }).replace(/\s+/g, " ").trim();
   }
 
+  // src/core/legacy.js
+  var CAT = {
+    comidasocial: "ComidaSocial",
+    diversion: "Diversión",
+    transporte: "Transporte",
+    trasporte: "Transporte",
+    casa: "Casa",
+    regalos: "Regalos y Cumpleaños",
+    regalo: "Regalos y Cumpleaños",
+    cumpleanos: "Regalos y Cumpleaños",
+    "higiene/salud": "Salud",
+    higiene: "Salud",
+    salud: "Salud",
+    "estetica/cosmetica": "Estética/Cosmética",
+    donacion: "Donación",
+    "servicios mensuales": "Servicios",
+    subscripciones: "Suscripciones",
+    suscripciones: "Suscripciones",
+    tarjeta: "Bancos/Comisiones",
+    ropa: "Ropa",
+    deporte: "Deporte",
+    estudio: "Educación",
+    otro: "Otros",
+    "": "Otros"
+  };
+  var key = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  function parseLegacyAmount(s) {
+    let t = String(s != null ? s : "").trim();
+    if (!t) return NaN;
+    if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
+    else if ((t.match(/\./g) || []).length > 1) {
+      const i = t.lastIndexOf(".");
+      t = t.slice(0, i).replace(/\./g, "") + t.slice(i);
+    } else if (/^-?\d{1,3}\.\d{3}$/.test(t)) t = t.replace(".", "");
+    return Number(t);
+  }
+  function legacyCategoria(cat, descripcion) {
+    const k = key(cat);
+    if (k === "alimentacion") return /pedidos ?ya|rappi/i.test(descripcion) ? "Delivery" : "Supermercado";
+    return CAT[k] || "Otros";
+  }
+  function importLegacyRows(rows, { hasta, now }) {
+    const movs = [];
+    let omitidas = 0;
+    rows.slice(1).forEach((r2, i) => {
+      const [anio, mes, quienRaw, desc, montoRaw, coment, cat] = r2;
+      const fechaMes = `${anio}-${String(mes).padStart(2, "0")}`;
+      const monto = parseLegacyAmount(montoRaw);
+      if (!/^\d{4}-\d{2}$/.test(fechaMes) || !Number.isFinite(monto) || r2.length < 5) {
+        omitidas++;
+        return;
+      }
+      if (fechaMes > hasta || monto <= 0) {
+        omitidas++;
+        return;
+      }
+      const esTotal = /^total/i.test(String(cat || ""));
+      const moneda = esTotal && /dol/i.test(desc) ? "USD" : "UYU";
+      const quien = ["Juani", "Mili"].includes(String(quienRaw).trim()) ? String(quienRaw).trim() : "Compartido";
+      const descripcion = esTotal ? `${desc} (total sin detalle)` : String(desc || "").trim();
+      movs.push({
+        id: `hist-${i + 2}`,
+        fecha: `${fechaMes}-15`,
+        tipo: "manual",
+        medio: `Planilla (${String(coment || "").trim() || "sin dato"})`,
+        comercio_raw: String(desc || "").trim(),
+        comercio: normalizeComercio(desc),
+        cuenta_destino: "",
+        banco_destino: "",
+        descripcion,
+        monto_orig: monto,
+        moneda,
+        cotizacion: "",
+        monto_uyu: moneda === "UYU" ? monto : "",
+        monto_usd: moneda === "USD" ? monto : "",
+        categoria: esTotal ? "Otros" : legacyCategoria(cat, desc),
+        quien,
+        clasificado_por: "manual",
+        revisado: true,
+        bloqueado: true,
+        origen: "historico",
+        nota: "Importado de Gastos Mensuales",
+        creado: now,
+        modificado: now
+      });
+    });
+    return { movs, omitidas };
+  }
+
   // apps-script/main.js
   var SENDER = "comunicaciones@itau.com.uy";
   var LABEL_OK = "Finanzas/Procesado";
@@ -777,8 +870,23 @@ var FH = (() => {
     log("info", "configuracion", "Pestañas, semillas, etiquetas y disparador diario listos");
     SpreadsheetApp.getUi().alert("Configuración lista. Completá la pestaña Cuentas y después usá Finanzas → Reconstruir historial.");
   }
+  function importarPlanillaVieja() {
+    const sh = SpreadsheetApp.getActive().getSheetByName("Gastos Mensuales");
+    if (!sh) throw new Error('No encuentro la pestaña "Gastos Mensuales"');
+    const rows = sh.getDataRange().getDisplayValues();
+    const { movs, omitidas } = importLegacyRows(rows, { hasta: "2025-12", now: nowMontevideoIso() });
+    const existing = new Set(readAll(TABS.movimientos).map((m) => String(m.id)));
+    const nuevos = movs.filter((m) => !existing.has(m.id));
+    append(TABS.movimientos, nuevos);
+    const cats = new Set(readAll(TABS.categorias).map((c) => c.nombre));
+    const faltan = SEED_CATEGORIAS.filter((c) => !cats.has(c.nombre));
+    append(TABS.categorias, faltan);
+    log("info", "importacion_planilla", `importados=${nuevos.length} omitidos=${omitidas} categorias_nuevas=${faltan.map((c) => c.nombre).join(",")}`);
+    withLock(mantenimiento);
+    return { importados: nuevos.length, omitidas };
+  }
   function onOpen() {
-    SpreadsheetApp.getUi().createMenu("Finanzas").addItem("Procesar ahora", "procesarAhora").addItem("Consolidar reglas", "consolidarReglas").addItem("Reconstruir historial…", "reconstruir").addSeparator().addItem("Configurar (primera vez)", "configurar").addToUi();
+    SpreadsheetApp.getUi().createMenu("Finanzas").addItem("Procesar ahora", "procesarAhora").addItem("Consolidar reglas", "consolidarReglas").addItem("Reconstruir historial…", "reconstruir").addItem("Importar planilla vieja (hasta 2025)", "importarPlanillaVieja").addSeparator().addItem("Configurar (primera vez)", "configurar").addToUi();
   }
   return __toCommonJS(main_exports);
 })();
@@ -790,3 +898,4 @@ function reconstruir() { return FH.reconstruir.apply(null, arguments); }
 function continuarReconstruccion() { return FH.continuarReconstruccion.apply(null, arguments); }
 function configurar() { return FH.configurar.apply(null, arguments); }
 function onOpen() { return FH.onOpen.apply(null, arguments); }
+function importarPlanillaVieja() { return FH.importarPlanillaVieja.apply(null, arguments); }
