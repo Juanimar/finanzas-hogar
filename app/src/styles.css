@@ -81,3 +81,6 @@ header .seg button.on { background: var(--green); color: #fff; font-weight: 600;
 .cattrack { height: 8px; background: var(--soft); border-radius: 999px; overflow: hidden; }
 .catfill { display: block; height: 100%; background: var(--green); border-radius: 999px; }
 .catamt { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; }
+.quickchips { margin-top: 10px; }
+.quickchips .chip.more { border-style: dashed; color: var(--muted); }
+.card.mov { padding-bottom: 14px; }
