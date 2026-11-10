@@ -36,7 +36,7 @@ export function processMessages(messages, store, rateProvider, now, origen = 'gm
     if (parsed === null) { ignorados++; continue; }
     if (!parsed.ok) {
       revisar.push(msg.id);
-      store.log('aviso', 'mail_no_leido', `${msg.subject}: ${parsed.reason}`, msg.id);
+      store.log('aviso', 'mail_no_leido', `${msg.subject}: ${parsed.reason} | ${String(msg.body).slice(0, 300)}`, msg.id);
       continue;
     }
     for (const d of parsed.movs) {

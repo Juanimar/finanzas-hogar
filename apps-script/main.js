@@ -6,6 +6,7 @@ import { applyToSimilar } from '../src/core/classify.js';
 import { consolidate } from '../src/core/learn.js';
 import { pickRate, buildBcuRequest, parseBcuResponse, BCU_URL } from '../src/core/money.js';
 import { nowMontevideoIso } from '../src/core/dates.js';
+import { htmlToText } from '../src/core/html.js';
 
 const SENDER = 'comunicaciones@itau.com.uy';
 const LABEL_OK = 'Finanzas/Procesado';
@@ -108,7 +109,8 @@ function collect(query, start, max, deadline) {
     count++;
     for (const m of t.getMessages()) {
       if (!String(m.getFrom()).toLowerCase().includes(SENDER) && !/^fwd?:/i.test(m.getSubject())) continue;
-      msgs.push({ id: m.getId(), subject: m.getSubject(), body: m.getPlainBody(), date: m.getDate().toISOString(), thread: t });
+      // Itaú sends HTML-only mails; convert ourselves instead of relying on getPlainBody().
+      msgs.push({ id: m.getId(), subject: m.getSubject(), body: htmlToText(m.getBody()), date: m.getDate().toISOString(), thread: t });
     }
   }
   return { msgs, count, total: threads.length };

@@ -441,7 +441,7 @@ var FH = (() => {
       }
       if (!parsed.ok) {
         revisar.push(msg.id);
-        store.log("aviso", "mail_no_leido", `${msg.subject}: ${parsed.reason}`, msg.id);
+        store.log("aviso", "mail_no_leido", `${msg.subject}: ${parsed.reason} | ${String(msg.body).slice(0, 300)}`, msg.id);
         continue;
       }
       for (const d of parsed.movs) {
@@ -490,6 +490,37 @@ var FH = (() => {
       out.push({ id: newId(), tipo: "contiene", patron: t, categoria: rs[0].categoria, quien: "", descripcion: t.charAt(0) + t.slice(1).toLowerCase(), origen: "agrupacion", usos: 0, creada: now, modificada: now });
     }
     return out;
+  }
+
+  // src/core/html.js
+  var ENTITIES = {
+    nbsp: " ",
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+    aacute: "á",
+    eacute: "é",
+    iacute: "í",
+    oacute: "ó",
+    uacute: "ú",
+    ntilde: "ñ",
+    uuml: "ü",
+    Aacute: "Á",
+    Eacute: "É",
+    Iacute: "Í",
+    Oacute: "Ó",
+    Uacute: "Ú",
+    Ntilde: "Ñ",
+    iexcl: "¡",
+    iquest: "¿"
+  };
+  function htmlToText(html) {
+    return String(html || "").replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, " ").replace(/<br\s*\/?>|<\/(p|div|td|tr|h\d|li)>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d))).replace(/&([a-z]+);/gi, (m, n) => {
+      var _a;
+      return (_a = ENTITIES[n]) != null ? _a : m;
+    }).replace(/\s+/g, " ").trim();
   }
 
   // apps-script/main.js
@@ -586,7 +617,7 @@ var FH = (() => {
       count++;
       for (const m of t.getMessages()) {
         if (!String(m.getFrom()).toLowerCase().includes(SENDER) && !/^fwd?:/i.test(m.getSubject())) continue;
-        msgs.push({ id: m.getId(), subject: m.getSubject(), body: m.getPlainBody(), date: m.getDate().toISOString(), thread: t });
+        msgs.push({ id: m.getId(), subject: m.getSubject(), body: htmlToText(m.getBody()), date: m.getDate().toISOString(), thread: t });
       }
     }
     return { msgs, count, total: threads.length };
