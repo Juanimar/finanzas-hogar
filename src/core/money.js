@@ -36,3 +36,23 @@ export function parseBcuResponse(xml) {
   while ((m = re.exec(xml))) out.push({ fecha: m[1], usd_uyu: Number(m[2]) });
   return out;
 }
+
+// ---------- Gastos divididos ----------
+// `parte` = fracción del gasto que le corresponde a la familia (0 < parte < 1). Vacío = todo.
+// Las columnas del banco (monto_orig/uyu/usd) no se tocan; todo lo demás usa el monto efectivo.
+
+export function parteDe(m) {
+  const p = Number(String(m?.parte ?? '').replace(',', '.'));
+  return p > 0 && p < 1 ? p : 1;
+}
+
+export function efectivo(m, currency) {
+  const base = Number(currency === 'USD' ? m.monto_usd : m.monto_uyu) || 0;
+  return round2(base * parteDe(m));
+}
+
+/** Fracción a guardar a partir de "entre N" o de un monto propio; '' = sin dividir. */
+export function parteDesde({ entre, monto }, montoOrig) {
+  const p = entre ? 1 / Number(entre) : Number(monto) / Number(montoOrig);
+  return p > 0 && p < 1 ? Math.round(p * 1e6) / 1e6 : '';
+}

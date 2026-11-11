@@ -94,3 +94,6 @@ header .seg button.on { background: var(--green); color: #fff; font-weight: 600;
 .legend .lg { display: inline-flex; align-items: center; gap: 5px; }
 .legend .sw { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
 .legend .lg .dot.avgd { margin-left: 0; }
+.dividir { margin: 6px 0 10px; display: grid; gap: 8px; }
+.dividir-otro { display: grid; gap: 8px; }
+.amt .small { font-weight: 400; text-align: right; }

@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
-import { fmt, dayLabel, amountOf } from './format.js';
+import { fmt, dayLabel, amountOf, ownOrig, parteLabel } from './format.js';
+import { parteDe } from '../../../src/core/money.js';
 
 export function MovList({ movs, currency, onOpen }) {
   const sorted = [...movs].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
@@ -12,8 +13,10 @@ export function MovList({ movs, currency, onOpen }) {
             <div class="small muted">{dayLabel(m.fecha)} · {m.categoria}{m.quien && m.quien !== 'Compartido' ? ` · ${m.quien}` : ''}</div>
           </span>
           <span class={m.tipo === 'pago_tarjeta' ? 'muted' : ''}>
-            {fmt(amountOf(m, currency) || m.monto_orig, amountOf(m, currency) ? currency : m.moneda)}
-            {m.moneda !== currency && <div class="small muted">{fmt(m.monto_orig, m.moneda)}</div>}
+            {fmt(amountOf(m, currency) || ownOrig(m), amountOf(m, currency) ? currency : m.moneda)}
+            {parteDe(m) < 1
+              ? <div class="small muted">pagaste {fmt(m.monto_orig, m.moneda)} · {parteLabel(m)}</div>
+              : m.moneda !== currency && <div class="small muted">{fmt(m.monto_orig, m.moneda)}</div>}
           </span>
         </button>
       ))}

@@ -1,5 +1,5 @@
+import { efectivo as amount } from './money.js';
 const r2 = n => Math.round(n * 100) / 100;
-const amount = (m, currency) => Number(currency === 'USD' ? m.monto_usd : m.monto_uyu) || 0;
 const inMonth = (m, yyyymm) => String(m.fecha).startsWith(yyyymm);
 
 export function catIndex(categorias) {

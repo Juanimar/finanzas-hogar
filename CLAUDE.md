@@ -30,7 +30,7 @@ ID: `1jyPGemEDElKxN4lxUPTmoHLAXvkbf249idA_bsWw9HI` ("Finanzas Juani-Mili"). Las 
 
 | Pestaña | Contenido |
 |---|---|
-| Movimientos | Un movimiento por fila. `origen`: gmail / historico / manual. `clasificado_por`: cuenta / regla_exacta / regla_contiene / manual / lote / pendiente |
+| Movimientos | Un movimiento por fila. `parte` (última columna) = fracción propia de un gasto dividido; vacía = todo. Los montos del banco no se tocan: todo total usa `efectivo()` de `money.js`. `origen`: gmail / historico / manual. `clasificado_por`: cuenta / regla_exacta / regla_contiene / manual / lote / pendiente |
 | Reglas | `exacta` o `contiene` (por palabra entera sobre el comercio normalizado) |
 | Cuentas | Tarjetas y cuentas propias (`tarjeta_propia`, `propia_interna`, `propia_ahorro`) y cuentas de terceros con nombre y categoría |
 | Categorías | Grupos: Fijos, Variables, No es gasto, Ingresos |

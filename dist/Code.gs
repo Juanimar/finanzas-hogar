@@ -59,7 +59,8 @@ var FH = (() => {
         "origen",
         "nota",
         "creado",
-        "modificado"
+        "modificado",
+        "parte"
       ]
     },
     reglas: {

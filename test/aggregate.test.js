@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isGasto, monthSummary, cumulativeByDay, merchantTotals, catIndex } from '../src/core/aggregate.js';
+import { isGasto, monthSummary, cumulativeByDay, merchantTotals, catIndex, yearSummary } from '../src/core/aggregate.js';
 import { SEED_CATEGORIAS } from '../src/core/seed.js';
 
 const m = (fecha, categoria, uyu, usd, extra = {}) => ({ fecha, categoria, monto_uyu: uyu, monto_usd: usd, tipo: 'consumo_credito', clasificado_por: 'regla_exacta', revisado: true, ...extra });
@@ -119,5 +119,21 @@ describe('yearSummary', () => {
     expect(y.ingresos).toBe(5000);
     expect(y.tasaAhorro).toBe(20);
     expect(y.meses[2].porCategoria).toEqual([expect.objectContaining({ categoria: 'Supermercado', total: 300 })]);
+  });
+});
+
+describe('gastos divididos', () => {
+  const cats = [{ nombre: 'Supermercado', grupo: 'Variables' }];
+  const movs = [
+    { id: 'a', fecha: '2026-11-03', tipo: 'credito', categoria: 'Supermercado', monto_uyu: 4000, monto_usd: 100, parte: 0.1, descripcion: 'Super' },
+    { id: 'b', fecha: '2026-11-04', tipo: 'credito', categoria: 'Supermercado', monto_uyu: 600, monto_usd: 15, descripcion: 'Super' },
+  ];
+  it('todos los totales usan solo la parte propia', () => {
+    const s = monthSummary(movs, cats, '2026-11', 'UYU');
+    expect(s.total).toBe(1000);
+    expect(s.porCategoria[0].total).toBe(1000);
+    expect(cumulativeByDay(movs, cats, '2026-11', 'UYU')[3]).toBe(1000);
+    expect(merchantTotals(movs, cats, 'Supermercado', '2026-11', 'UYU')[0].mes).toBe(1000);
+    expect(yearSummary(movs, cats, '2026', 'USD').total).toBe(25);
   });
 });

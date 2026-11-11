@@ -11,7 +11,7 @@ import { Movements } from './ui/Movements.jsx';
 import { Editor } from './ui/Editor.jsx';
 import { NewEntry } from './ui/NewEntry.jsx';
 import { Sheet } from './ui/Sheet.jsx';
-import { monthLabel, shiftMonth, fmt, cap } from './ui/format.js';
+import { monthLabel, shiftMonth, fmt, cap, ownOrig } from './ui/format.js';
 import './styles.css';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
@@ -88,7 +88,7 @@ function App() {
         ))}
       </nav>
       {detail && (
-        <Sheet title={`${detail.descripcion || detail.comercio_raw} · ${fmt(detail.monto_orig, detail.moneda)}`} onClose={() => setDetail(null)}>
+        <Sheet title={`${detail.descripcion || detail.comercio_raw} · ${fmt(ownOrig(detail), detail.moneda)}`} onClose={() => setDetail(null)}>
           <p class="small muted">{detail.fecha} · {detail.medio} · {detail.comercio_raw || `${detail.banco_destino} ${detail.cuenta_destino}`}</p>
           <Editor mov={detail} categorias={state.categorias} saveLabel="Guardar" onSave={edit => { store.review(detail, edit); setDetail(null); }} />
         </Sheet>

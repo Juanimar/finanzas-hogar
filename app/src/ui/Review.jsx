@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { Editor } from './Editor.jsx';
-import { fmt, dayLabel } from './format.js';
+import { fmt, dayLabel, ownOrig, parteLabel } from './format.js';
+import { parteDe } from '../../../src/core/money.js';
 
 // Categorías más usadas en lo ya revisado: un toque y listo.
 function topCategorias(movs, n = 6) {
@@ -33,12 +34,13 @@ export function Review({ state, store }) {
                 <div>{m.descripcion || m.comercio_raw}</div>
                 <div class="small muted">{dayLabel(m.fecha)} · {m.medio}{m.tipo === 'transferencia' ? ` → ${m.banco_destino} ${m.cuenta_destino}` : ''}</div>
               </div>
-              <div class="amt">{fmt(m.monto_orig, m.moneda)}</div>
+              <div class="amt">{fmt(ownOrig(m), m.moneda)}{parteDe(m) < 1 && <div class="small muted">pagaste {fmt(m.monto_orig, m.moneda)} · {parteLabel(m)}</div>}</div>
             </div>
             {open !== m.id ? (
               <div class="chips quickchips">
                 {chips.map(c => <button key={c} class={`chip ${c === sugerida ? 'on' : ''}`} onClick={() => quick(m, c)}>{c}</button>)}
                 <button class="chip more" onClick={() => setOpen(m.id)}>Otra…</button>
+                <button class="chip more" onClick={() => setOpen(m.id)}>÷ Dividir</button>
               </div>
             ) : (
               <Editor mov={m} categorias={state.categorias} onSave={edit => { setOpen(null); store.review(m, edit); }} />

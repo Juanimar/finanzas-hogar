@@ -5,7 +5,7 @@ export const TABS = {
     columns: [
       'id', 'fecha', 'tipo', 'medio', 'comercio_raw', 'comercio', 'cuenta_destino', 'banco_destino',
       'descripcion', 'monto_orig', 'moneda', 'cotizacion', 'monto_uyu', 'monto_usd', 'categoria', 'quien',
-      'clasificado_por', 'revisado', 'bloqueado', 'origen', 'nota', 'creado', 'modificado',
+      'clasificado_por', 'revisado', 'bloqueado', 'origen', 'nota', 'creado', 'modificado', 'parte',
     ],
   },
   reglas: {

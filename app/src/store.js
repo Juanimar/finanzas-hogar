@@ -68,6 +68,7 @@ export function createStore(client) {
           quien: edit.quien ?? mov.quien,
           descripcion: edit.descripcion || edit.nombreCuenta || mov.descripcion,
           nota: edit.nota ?? mov.nota,
+          parte: edit.parte !== undefined ? edit.parte : mov.parte,
           clasificado_por: changedSomething || mov.clasificado_por === 'pendiente' ? 'manual' : mov.clasificado_por,
           revisado: true,
           bloqueado: mov.bloqueado || changedSomething,
