@@ -6,7 +6,9 @@ Los avisos de Itaú que llegan a Gmail se pasan solos a la planilla "Finanzas Ju
 - **`apps-script/`**: el script que corre en Google todos los días a las 06:00. Se empaqueta en un único `dist/Code.gs`.
 - **`app/`**: la app web (PWA), publicada en GitHub Pages.
 
-Diseño: `docs/superpowers/specs/` · Plan: `docs/superpowers/plans/`
+Diseño: `docs/superpowers/specs/` · Plan: `docs/superpowers/plans/` · Contexto para Claude Code: `CLAUDE.md`
+
+> Para actualizar el script después de la instalación: `npm run deploy:gas` (ver `CLAUDE.md`).
 
 ---
 
