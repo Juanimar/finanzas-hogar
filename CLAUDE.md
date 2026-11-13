@@ -19,6 +19,7 @@ Gmail (avisos Itaú) ──► Apps Script (diario 06:00 MVD) ──► Google S
   - `aggregate.js`: totales del mes y del año, acumulado por día, top de comercios.
   - `legacy.js`: importa la pestaña vieja "Gastos Mensuales" (jul 2024 a dic 2025).
   - `inversiones.js`: sincroniza la pestaña "Inversiones" (depósitos en USD) como Ahorro/Inversión.
+  - `pdf.js` + `estadoCuenta.js`: leen el PDF mensual del estado de cuenta VISA (mail de info-mail@itau.com.uy) y agregan lo que no llegó por aviso. Itaú **no manda aviso** de muchos consumos (Mercado Pago, Uber exterior, tarjeta 1013, seguro de vida). Reglas del cruce: ventana ±7 días, cuotas 2..N se ignoran (la 1/N se compara contra cuota×N), compra + "REDUC. IVA" = monto neto del aviso, varias líneas del mismo día pueden sumar un solo aviso (eBay, propinas). Probado contra los estados de cuenta reales de 2026; **no commitear PDFs reales** (el repo es público).
 - **`apps-script/main.js`**: los puntos de entrada del script, como el menú "Finanzas", `procesarDiario` y `continuarReconstruccion`. Se empaqueta con esbuild en **`dist/Code.gs`**, que es un archivo generado y no se edita a mano. Las funciones globales se declaran en `ENTRY_POINTS` de `scripts/build-gas.mjs`.
 - **`app/`**: PWA en Preact + Vite. Entra con Google Identity Services y habla directo con la API de Sheets (lee con UNFORMATTED_VALUE y escribe con RAW). Con `?demo=1` usa datos de ejemplo, sin login.
   - Pantallas: Resumen (con selector Mes/Año) · Revisar (clasificación con un toque) · Categorías · Movimientos.

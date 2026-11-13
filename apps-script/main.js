@@ -9,11 +9,17 @@ import { nowMontevideoIso } from '../src/core/dates.js';
 import { htmlToText } from '../src/core/html.js';
 import { importLegacyRows } from '../src/core/legacy.js';
 import { inversionesToMovs } from '../src/core/inversiones.js';
+import { pdfTextLines } from '../src/core/pdf.js';
+import { parseEstadoCuenta, conciliar } from '../src/core/estadoCuenta.js';
 
 const SENDER = 'comunicaciones@itau.com.uy';
 const LABEL_OK = 'Finanzas/Procesado';
 const LABEL_REVISAR = 'Finanzas/Revisar';
 const DAILY_LOOKBACK = 'newer_than:7d';
+// Estado de cuenta VISA mensual (PDF adjunto): red de seguridad para lo que no llegó por aviso.
+const EDC_SENDER = 'info-mail@itau.com.uy';
+const LABEL_EDC = 'Finanzas/EstadoCuenta';
+const EDC_DESDE = '2026-01-01'; // antes de esto manda la planilla vieja
 const TIME_BUDGET_MS = 4 * 60 * 1000;
 const PAGE = 20;
 const GROW_ROWS = 500;
@@ -136,6 +142,42 @@ function runBatch(msgs, origen) {
   return result;
 }
 
+// ---------- Estado de cuenta VISA ----------
+
+function conciliarEstados(deadline) {
+  const q = `from:${EDC_SENDER} subject:"estado de cuenta Visa" has:attachment after:${EDC_DESDE.replace(/-/g, '/')} -label:${LABEL_EDC.replace('/', '-')}`;
+  const threads = GmailApp.search(q, 0, 24);
+  const msgs = [];
+  for (const t of threads) for (const m of t.getMessages()) msgs.push({ m, t });
+  msgs.sort((a, b) => a.m.getDate() - b.m.getDate()); // en orden, para que cada mes vea lo agregado por el anterior
+  if (!msgs.length) return { estados: 0, agregados: 0 };
+
+  let movs = readAll(TABS.movimientos);
+  const ids = new Set(movs.map(m => String(m.id)));
+  const ctx = { reglas: readAll(TABS.reglas), cuentas: readAll(TABS.cuentas), desde: EDC_DESDE, now: nowMontevideoIso(), rateFor: makeRateProvider() };
+  const ok = label(LABEL_EDC);
+  let estados = 0, agregados = 0;
+  for (const { m, t } of msgs) {
+    if (deadline && Date.now() > deadline) break;
+    const pdf = m.getAttachments().find(a => /\.pdf$/i.test(a.getName()));
+    if (!pdf) continue;
+    const ec = parseEstadoCuenta(pdfTextLines(Uint8Array.from(pdf.getBytes(), b => b & 255)));
+    if (!ec.cierre || !ec.items.length) {
+      log('aviso', 'estado_cuenta_no_leido', `No pude leer el estado de cuenta "${m.getSubject()}" del ${m.getDate().toISOString().slice(0, 10)}`, m.getId());
+      label(LABEL_REVISAR).addToThread(t);
+      continue;
+    }
+    const nuevos = conciliar(ec, movs, ctx).filter(n => !ids.has(n.id));
+    append(TABS.movimientos, nuevos);
+    for (const n of nuevos) ids.add(n.id);
+    movs = movs.concat(nuevos);
+    ok.addToThread(t);
+    estados++; agregados += nuevos.length;
+    log('info', 'estado_cuenta', `cierre=${ec.cierre} lineas=${ec.items.length} agregados=${nuevos.length}`, m.getId());
+  }
+  return { estados, agregados };
+}
+
 // ---------- Maintenance ----------
 
 function syncInversiones() {
@@ -195,6 +237,7 @@ export function procesarDiario() {
     }
     const r = runBatch(msgs, 'gmail');
     PropertiesService.getScriptProperties().setProperty('LAST_OK', new Date().toISOString().slice(0, 10));
+    try { conciliarEstados(Date.now() + TIME_BUDGET_MS); } catch (e) { log('aviso', 'estado_cuenta', e.message); }
     const m = mantenimiento();
     log('info', 'ejecucion', `nuevos=${r.nuevos} revisar=${r.revisar.length} reglas=${m.reglas} reclasificados=${m.reclasificados}`);
     return r;
@@ -294,6 +337,14 @@ export function sincronizarInversiones() {
   return n;
 }
 
+export function conciliarEstadosAhora() {
+  const r = withLock(() => conciliarEstados(Date.now() + TIME_BUDGET_MS));
+  if (!r) { SpreadsheetApp.getUi().alert('Hay otra ejecución en curso. Probá en un minuto.'); return; }
+  SpreadsheetApp.getUi().alert(r.estados
+    ? `Listo: revisé ${r.estados} estado(s) de cuenta y agregué ${r.agregados} movimientos que no habían llegado por aviso.`
+    : 'No hay estados de cuenta nuevos para revisar.');
+}
+
 export function onOpen() {
   SpreadsheetApp.getUi().createMenu('Finanzas')
     .addItem('Procesar ahora', 'procesarAhora')
@@ -301,6 +352,7 @@ export function onOpen() {
     .addItem('Reconstruir historial…', 'reconstruir')
     .addItem('Importar planilla vieja (hasta 2025)', 'importarPlanillaVieja')
     .addItem('Sincronizar Inversiones', 'sincronizarInversiones')
+    .addItem('Conciliar estados de cuenta VISA', 'conciliarEstadosAhora')
     .addSeparator()
     .addItem('Configurar (primera vez)', 'configurar')
     .addToUi();

@@ -21,6 +21,7 @@ var FH = (() => {
   // apps-script/main.js
   var main_exports = {};
   __export(main_exports, {
+    conciliarEstadosAhora: () => conciliarEstadosAhora,
     configurar: () => configurar,
     consolidarReglas: () => consolidarReglas,
     continuarReconstruccion: () => continuarReconstruccion,
@@ -78,8 +79,8 @@ var FH = (() => {
   var BOOL = { TRUE: true, FALSE: false };
   function rowToObj(columns, row) {
     const o = {};
-    columns.forEach((c, i) => {
-      let v = row[i];
+    columns.forEach((c, i2) => {
+      let v = row[i2];
       if (v === void 0 || v === null) v = "";
       if (typeof v === "string" && v in BOOL) v = BOOL[v];
       o[c] = v;
@@ -122,7 +123,7 @@ var FH = (() => {
   };
   var SEED_CATEGORIAS = Object.entries(CATS).flatMap(
     ([grupo, nombres]) => nombres.map((nombre) => ({ nombre, grupo, activa: true }))
-  ).map((c, i) => ({ ...c, orden: i + 1 }));
+  ).map((c, i2) => ({ ...c, orden: i2 + 1 }));
   var r = (patron, categoria, descripcion, tipo = "contiene") => ({ tipo, patron, categoria, descripcion });
   var SEED_REGLAS = [
     r("DEVOTO", "Supermercado", "Devoto"),
@@ -220,7 +221,7 @@ var FH = (() => {
     }
   ];
   function parseItauEmail({ id, subject, body, date }) {
-    const p = PARSERS.find((x) => x.subject.test(subject || ""));
+    const p = PARSERS.find((x2) => x2.subject.test(subject || ""));
     if (!p) return null;
     const m = clean(body).match(p.re);
     if (!m) return { ok: false, reason: `Formato no reconocido para "${subject}"` };
@@ -315,15 +316,15 @@ var FH = (() => {
   var titleCase = (s) => s.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase());
   function quienFor(medio, cuentas) {
     const last4 = (String(medio || "").match(/(\d{4})$/) || [])[1];
-    const c = last4 && cuentas.find((x) => x.tipo === "tarjeta_propia" && String(x.numero) === last4);
+    const c = last4 && cuentas.find((x2) => x2.tipo === "tarjeta_propia" && String(x2.numero) === last4);
     return c && c.titular || "Compartido";
   }
   function matchRule(comercio, reglas) {
     if (!comercio) return null;
-    const exact = reglas.find((r2) => r2.tipo === "exacta" && r2.patron === comercio);
+    const exact = reglas.find((r3) => r3.tipo === "exacta" && r3.patron === comercio);
     if (exact) return { regla: exact, por: "regla_exacta" };
     const padded = ` ${comercio} `;
-    const hits = reglas.filter((r2) => r2.tipo === "contiene" && r2.patron && padded.includes(` ${r2.patron} `));
+    const hits = reglas.filter((r3) => r3.tipo === "contiene" && r3.patron && padded.includes(` ${r3.patron} `));
     if (!hits.length) return null;
     hits.sort((a, b) => b.patron.length - a.patron.length);
     return { regla: hits[0], por: "regla_contiene" };
@@ -345,7 +346,7 @@ var FH = (() => {
       return { categoria: "Movimiento interno", quien, descripcion: `Pago tarjeta ${mov.medio}`, clasificado_por: "regla_exacta", revisado: true };
     }
     if (mov.tipo === "transferencia") {
-      const c = cuentas.find((x) => String(x.numero) === String(mov.cuenta_destino));
+      const c = cuentas.find((x2) => String(x2.numero) === String(mov.cuenta_destino));
       if (c && c.tipo === "tercero" && !c.categoria) {
         return { categoria: "Otros", quien: c.quien || quien, descripcion: c.nombre || `Cuenta ${c.numero}`, clasificado_por: "pendiente", revisado: false };
       }
@@ -380,9 +381,9 @@ var FH = (() => {
   function pickRate(rates, fecha) {
     const target = Date.parse(fecha);
     let best = null;
-    for (const r2 of rates) {
-      const t = Date.parse(r2.fecha);
-      if (t <= target && target - t <= MAX_DAYS_BACK * DAY && (!best || t > Date.parse(best.fecha))) best = r2;
+    for (const r3 of rates) {
+      const t = Date.parse(r3.fecha);
+      if (t <= target && target - t <= MAX_DAYS_BACK * DAY && (!best || t > Date.parse(best.fecha))) best = r3;
     }
     return best;
   }
@@ -417,14 +418,14 @@ var FH = (() => {
     }
   }
   function buildMovimiento(draft, { reglas, cuentas }, rate, now, origen = "gmail") {
-    var _a;
+    var _a2;
     const comercio = normalizeComercio(draft.comercio_raw);
     const base = { ...draft, comercio, bloqueado: false };
     const c = classify(base, { reglas, cuentas });
     return {
       ...base,
       ...c,
-      comercio: (_a = c.comercio) != null ? _a : comercio,
+      comercio: (_a2 = c.comercio) != null ? _a2 : comercio,
       cotizacion: rate || "",
       ...computeAmounts(draft.monto_orig, draft.moneda, rate),
       origen,
@@ -479,20 +480,20 @@ var FH = (() => {
   function consolidate(reglas, now) {
     const byToken = /* @__PURE__ */ new Map();
     const seen = /* @__PURE__ */ new Set();
-    for (const r2 of reglas.filter((x) => x.tipo === "exacta")) {
-      if (seen.has(r2.patron)) continue;
-      seen.add(r2.patron);
-      for (const t of new Set(tokens(r2.patron))) {
+    for (const r3 of reglas.filter((x2) => x2.tipo === "exacta")) {
+      if (seen.has(r3.patron)) continue;
+      seen.add(r3.patron);
+      for (const t of new Set(tokens(r3.patron))) {
         if (t.length < 4) continue;
         if (!byToken.has(t)) byToken.set(t, []);
-        byToken.get(t).push(r2);
+        byToken.get(t).push(r3);
       }
     }
-    const existing = new Set(reglas.filter((r2) => r2.tipo === "contiene").map((r2) => r2.patron));
+    const existing = new Set(reglas.filter((r3) => r3.tipo === "contiene").map((r3) => r3.patron));
     const out = [];
     for (const [t, rs] of byToken) {
       if (rs.length < 2 || existing.has(t)) continue;
-      const cats = new Set(rs.map((r2) => r2.categoria));
+      const cats = new Set(rs.map((r3) => r3.categoria));
       if (cats.size !== 1) continue;
       out.push({ id: newId(), tipo: "contiene", patron: t, categoria: rs[0].categoria, quien: "", descripcion: t.charAt(0) + t.slice(1).toLowerCase(), origen: "agrupacion", usos: 0, creada: now, modificada: now });
     }
@@ -525,8 +526,8 @@ var FH = (() => {
   };
   function htmlToText(html) {
     return String(html || "").replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, " ").replace(/<br\s*\/?>|<\/(p|div|td|tr|h\d|li)>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d))).replace(/&([a-z]+);/gi, (m, n) => {
-      var _a;
-      return (_a = ENTITIES[n]) != null ? _a : m;
+      var _a2;
+      return (_a2 = ENTITIES[n]) != null ? _a2 : m;
     }).replace(/\s+/g, " ").trim();
   }
 
@@ -561,8 +562,8 @@ var FH = (() => {
     if (!t) return NaN;
     if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
     else if ((t.match(/\./g) || []).length > 1) {
-      const i = t.lastIndexOf(".");
-      t = t.slice(0, i).replace(/\./g, "") + t.slice(i);
+      const i2 = t.lastIndexOf(".");
+      t = t.slice(0, i2).replace(/\./g, "") + t.slice(i2);
     } else if (/^-?\d{1,3}\.\d{3}$/.test(t)) t = t.replace(".", "");
     return Number(t);
   }
@@ -574,11 +575,11 @@ var FH = (() => {
   function importLegacyRows(rows, { hasta, now }) {
     const movs = [];
     let omitidas = 0;
-    rows.slice(1).forEach((r2, i) => {
-      const [anio, mes, quienRaw, desc, montoRaw, coment, cat] = r2;
+    rows.slice(1).forEach((r3, i2) => {
+      const [anio, mes, quienRaw, desc, montoRaw, coment, cat] = r3;
       const fechaMes = `${anio}-${String(mes).padStart(2, "0")}`;
       const monto = parseLegacyAmount(montoRaw);
-      if (!/^\d{4}-\d{2}$/.test(fechaMes) || !Number.isFinite(monto) || r2.length < 5) {
+      if (!/^\d{4}-\d{2}$/.test(fechaMes) || !Number.isFinite(monto) || r3.length < 5) {
         omitidas++;
         return;
       }
@@ -591,7 +592,7 @@ var FH = (() => {
       const quien = ["Juani", "Mili"].includes(String(quienRaw).trim()) ? String(quienRaw).trim() : "Compartido";
       const descripcion = esTotal ? `${desc} (total sin detalle)` : String(desc || "").trim();
       movs.push({
-        id: `hist-${i + 2}`,
+        id: `hist-${i2 + 2}`,
         fecha: `${fechaMes}-15`,
         tipo: "manual",
         medio: `Planilla (${String(coment || "").trim() || "sin dato"})`,
@@ -627,14 +628,14 @@ var FH = (() => {
     return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : null;
   }
   function inversionesToMovs(rows, existentes, now) {
-    const start = rows.findIndex((r2) => String(r2[2]).trim() === "Depósitos" && String(r2[3]).trim() === "USD");
+    const start = rows.findIndex((r3) => String(r3[2]).trim() === "Depósitos" && String(r3[3]).trim() === "USD");
     if (start < 0) return [];
     const ids = new Set(existentes.map((m) => String(m.id)));
     const ahorros = existentes.filter((m) => m.categoria === "Ahorro/Inversión" && m.moneda === "USD");
     const out = [];
-    for (const r2 of rows.slice(start + 1)) {
-      const fecha = parseDate(r2[2]);
-      const monto = usd(r2[3]);
+    for (const r3 of rows.slice(start + 1)) {
+      const fecha = parseDate(r3[2]);
+      const monto = usd(r3[3]);
       if (!fecha || !(monto > 0)) continue;
       const id = `inv-${fecha}-${monto}`;
       if (ids.has(id)) continue;
@@ -670,11 +671,574 @@ var FH = (() => {
     return out;
   }
 
+  // node_modules/fflate/esm/browser.js
+  var u8 = Uint8Array;
+  var u16 = Uint16Array;
+  var i32 = Int32Array;
+  var fleb = new u8([
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    3,
+    3,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4,
+    5,
+    5,
+    5,
+    5,
+    0,
+    /* unused */
+    0,
+    0,
+    /* impossible */
+    0
+  ]);
+  var fdeb = new u8([
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    11,
+    11,
+    12,
+    12,
+    13,
+    13,
+    /* unused */
+    0,
+    0
+  ]);
+  var clim = new u8([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
+  var freb = function(eb, start) {
+    var b = new u16(31);
+    for (var i2 = 0; i2 < 31; ++i2) {
+      b[i2] = start += 1 << eb[i2 - 1];
+    }
+    var r3 = new i32(b[30]);
+    for (var i2 = 1; i2 < 30; ++i2) {
+      for (var j = b[i2]; j < b[i2 + 1]; ++j) {
+        r3[j] = j - b[i2] << 5 | i2;
+      }
+    }
+    return { b, r: r3 };
+  };
+  var _a = freb(fleb, 2);
+  var fl = _a.b;
+  var revfl = _a.r;
+  fl[28] = 258, revfl[258] = 28;
+  var _b = freb(fdeb, 0);
+  var fd = _b.b;
+  var revfd = _b.r;
+  var rev = new u16(32768);
+  for (i = 0; i < 32768; ++i) {
+    x = (i & 43690) >> 1 | (i & 21845) << 1;
+    x = (x & 52428) >> 2 | (x & 13107) << 2;
+    x = (x & 61680) >> 4 | (x & 3855) << 4;
+    rev[i] = ((x & 65280) >> 8 | (x & 255) << 8) >> 1;
+  }
+  var x;
+  var i;
+  var hMap = (function(cd, mb, r3) {
+    var s = cd.length;
+    var i2 = 0;
+    var l = new u16(mb);
+    for (; i2 < s; ++i2) {
+      if (cd[i2])
+        ++l[cd[i2] - 1];
+    }
+    var le = new u16(mb);
+    for (i2 = 1; i2 < mb; ++i2) {
+      le[i2] = le[i2 - 1] + l[i2 - 1] << 1;
+    }
+    var co;
+    if (r3) {
+      co = new u16(1 << mb);
+      var rvb = 15 - mb;
+      for (i2 = 0; i2 < s; ++i2) {
+        if (cd[i2]) {
+          var sv = i2 << 4 | cd[i2];
+          var r_1 = mb - cd[i2];
+          var v = le[cd[i2] - 1]++ << r_1;
+          for (var m = v | (1 << r_1) - 1; v <= m; ++v) {
+            co[rev[v] >> rvb] = sv;
+          }
+        }
+      }
+    } else {
+      co = new u16(s);
+      for (i2 = 0; i2 < s; ++i2) {
+        if (cd[i2]) {
+          co[i2] = rev[le[cd[i2] - 1]++] >> 15 - cd[i2];
+        }
+      }
+    }
+    return co;
+  });
+  var flt = new u8(288);
+  for (i = 0; i < 144; ++i)
+    flt[i] = 8;
+  var i;
+  for (i = 144; i < 256; ++i)
+    flt[i] = 9;
+  var i;
+  for (i = 256; i < 280; ++i)
+    flt[i] = 7;
+  var i;
+  for (i = 280; i < 288; ++i)
+    flt[i] = 8;
+  var i;
+  var fdt = new u8(32);
+  for (i = 0; i < 32; ++i)
+    fdt[i] = 5;
+  var i;
+  var flrm = /* @__PURE__ */ hMap(flt, 9, 1);
+  var fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
+  var max = function(a) {
+    var m = a[0];
+    for (var i2 = 1; i2 < a.length; ++i2) {
+      if (a[i2] > m)
+        m = a[i2];
+    }
+    return m;
+  };
+  var bits = function(d, p, m) {
+    var o = p / 8 | 0;
+    return (d[o] | d[o + 1] << 8) >> (p & 7) & m;
+  };
+  var bits16 = function(d, p) {
+    var o = p / 8 | 0;
+    return (d[o] | d[o + 1] << 8 | d[o + 2] << 16) >> (p & 7);
+  };
+  var shft = function(p) {
+    return (p + 7) / 8 | 0;
+  };
+  var slc = function(v, s, e) {
+    if (s == null || s < 0)
+      s = 0;
+    if (e == null || e > v.length)
+      e = v.length;
+    return new u8(v.subarray(s, e));
+  };
+  var ec = [
+    "unexpected EOF",
+    "invalid block type",
+    "invalid length/literal",
+    "invalid distance",
+    "stream finished",
+    "no stream handler",
+    ,
+    // determined by compression function
+    "no callback",
+    "invalid UTF-8 data",
+    "extra field too long",
+    "date not in range 1980-2099",
+    "filename too long",
+    "stream finishing",
+    "invalid zip data"
+    // determined by unknown compression method
+  ];
+  var err = function(ind, msg, nt) {
+    var e = new Error(msg || ec[ind]);
+    e.code = ind;
+    if (Error.captureStackTrace)
+      Error.captureStackTrace(e, err);
+    if (!nt)
+      throw e;
+    return e;
+  };
+  var inflt = function(dat, st, buf, dict) {
+    var sl = dat.length, dl = dict ? dict.length : 0;
+    if (!sl || st.f && !st.l)
+      return buf || new u8(0);
+    var noBuf = !buf;
+    var resize = noBuf || st.i != 2;
+    var noSt = st.i;
+    if (noBuf)
+      buf = new u8(sl * 3);
+    var cbuf = function(l2) {
+      var bl = buf.length;
+      if (l2 > bl) {
+        var nbuf = new u8(Math.max(bl * 2, l2));
+        nbuf.set(buf);
+        buf = nbuf;
+      }
+    };
+    var final = st.f || 0, pos = st.p || 0, bt = st.b || 0, lm = st.l, dm = st.d, lbt = st.m, dbt = st.n;
+    var tbts = sl * 8;
+    do {
+      if (!lm) {
+        final = bits(dat, pos, 1);
+        var type = bits(dat, pos + 1, 3);
+        pos += 3;
+        if (!type) {
+          var s = shft(pos) + 4, l = dat[s - 4] | dat[s - 3] << 8, t = s + l;
+          if (t > sl) {
+            if (noSt)
+              err(0);
+            break;
+          }
+          if (resize)
+            cbuf(bt + l);
+          buf.set(dat.subarray(s, t), bt);
+          st.b = bt += l, st.p = pos = t * 8, st.f = final;
+          continue;
+        } else if (type == 1)
+          lm = flrm, dm = fdrm, lbt = 9, dbt = 5;
+        else if (type == 2) {
+          var hLit = bits(dat, pos, 31) + 257, hcLen = bits(dat, pos + 10, 15) + 4;
+          var tl = hLit + bits(dat, pos + 5, 31) + 1;
+          pos += 14;
+          var ldt = new u8(tl);
+          var clt = new u8(19);
+          for (var i2 = 0; i2 < hcLen; ++i2) {
+            clt[clim[i2]] = bits(dat, pos + i2 * 3, 7);
+          }
+          pos += hcLen * 3;
+          var clb = max(clt), clbmsk = (1 << clb) - 1;
+          var clm = hMap(clt, clb, 1);
+          for (var i2 = 0; i2 < tl; ) {
+            var r3 = clm[bits(dat, pos, clbmsk)];
+            pos += r3 & 15;
+            var s = r3 >> 4;
+            if (s < 16) {
+              ldt[i2++] = s;
+            } else {
+              var c = 0, n = 0;
+              if (s == 16)
+                n = 3 + bits(dat, pos, 3), pos += 2, c = ldt[i2 - 1];
+              else if (s == 17)
+                n = 3 + bits(dat, pos, 7), pos += 3;
+              else if (s == 18)
+                n = 11 + bits(dat, pos, 127), pos += 7;
+              while (n--)
+                ldt[i2++] = c;
+            }
+          }
+          var lt = ldt.subarray(0, hLit), dt = ldt.subarray(hLit);
+          lbt = max(lt);
+          dbt = max(dt);
+          lm = hMap(lt, lbt, 1);
+          dm = hMap(dt, dbt, 1);
+        } else
+          err(1);
+        if (pos > tbts) {
+          if (noSt)
+            err(0);
+          break;
+        }
+      }
+      if (resize)
+        cbuf(bt + 131072);
+      var lms = (1 << lbt) - 1, dms = (1 << dbt) - 1;
+      var lpos = pos;
+      for (; ; lpos = pos) {
+        var c = lm[bits16(dat, pos) & lms], sym = c >> 4;
+        pos += c & 15;
+        if (pos > tbts) {
+          if (noSt)
+            err(0);
+          break;
+        }
+        if (!c)
+          err(2);
+        if (sym < 256)
+          buf[bt++] = sym;
+        else if (sym == 256) {
+          lpos = pos, lm = null;
+          break;
+        } else {
+          var add = sym - 254;
+          if (sym > 264) {
+            var i2 = sym - 257, b = fleb[i2];
+            add = bits(dat, pos, (1 << b) - 1) + fl[i2];
+            pos += b;
+          }
+          var d = dm[bits16(dat, pos) & dms], dsym = d >> 4;
+          if (!d)
+            err(3);
+          pos += d & 15;
+          var dt = fd[dsym];
+          if (dsym > 3) {
+            var b = fdeb[dsym];
+            dt += bits16(dat, pos) & (1 << b) - 1, pos += b;
+          }
+          if (pos > tbts) {
+            if (noSt)
+              err(0);
+            break;
+          }
+          if (resize)
+            cbuf(bt + 131072);
+          var end = bt + add;
+          if (bt < dt) {
+            var shift = dl - dt, dend = Math.min(dt, end);
+            if (shift + bt < 0)
+              err(3);
+            for (; bt < dend; ++bt)
+              buf[bt] = dict[shift + bt];
+          }
+          for (; bt < end; ++bt)
+            buf[bt] = buf[bt - dt];
+        }
+      }
+      st.l = lm, st.p = lpos, st.b = bt, st.f = final;
+      if (lm)
+        final = 1, st.m = lbt, st.d = dm, st.n = dbt;
+    } while (!final);
+    return bt != buf.length && noBuf ? slc(buf, 0, bt) : buf.subarray(0, bt);
+  };
+  var et = /* @__PURE__ */ new u8(0);
+  var zls = function(d, dict) {
+    if ((d[0] & 15) != 8 || d[0] >> 4 > 7 || (d[0] << 8 | d[1]) % 31)
+      err(6, "invalid zlib data");
+    if ((d[1] >> 5 & 1) == +!dict)
+      err(6, "invalid zlib data: " + (d[1] & 32 ? "need" : "unexpected") + " dictionary");
+    return (d[1] >> 3 & 4) + 2;
+  };
+  function unzlibSync(data, opts) {
+    return inflt(data.subarray(zls(data, opts && opts.dictionary), -4), { i: 2 }, opts && opts.out, opts && opts.dictionary);
+  }
+  var td = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
+  var tds = 0;
+  try {
+    td.decode(et, { stream: true });
+    tds = 1;
+  } catch (e) {
+  }
+
+  // src/core/pdf.js
+  var WIN_ANSI_80 = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
+  function latin1(bytes) {
+    let s = "";
+    for (let i2 = 0; i2 < bytes.length; i2 += 32768) s += String.fromCharCode.apply(null, bytes.subarray(i2, i2 + 32768));
+    return s;
+  }
+  var winAnsi = (code) => code >= 128 && code <= 159 ? WIN_ANSI_80[code - 128] : String.fromCharCode(code);
+  function unescapePdfString(raw) {
+    var _a2;
+    let out = "";
+    for (let i2 = 0; i2 < raw.length; i2++) {
+      const c = raw[i2];
+      if (c !== "\\") {
+        out += winAnsi(raw.charCodeAt(i2));
+        continue;
+      }
+      const n = raw[++i2];
+      if (/[0-7]/.test(n)) {
+        let oct = n;
+        while (oct.length < 3 && /[0-7]/.test(raw[i2 + 1])) oct += raw[++i2];
+        out += winAnsi(parseInt(oct, 8) & 255);
+      } else out += (_a2 = { n: "\n", r: "\r", t: "	", b: "\b", f: "\f" }[n]) != null ? _a2 : n;
+    }
+    return out;
+  }
+  function* streams(bytes) {
+    const s = latin1(bytes);
+    const re = /<<((?:(?!>>\s*stream)[\s\S])*?)>>\s*stream\r?\n/g;
+    let m;
+    while (m = re.exec(s)) {
+      const dict = m[1];
+      const start = m.index + m[0].length;
+      const len = /\/Length (\d+)(?!\s+\d+\s+R)/.exec(dict);
+      const end = len ? start + Number(len[1]) : s.indexOf("endstream", start);
+      re.lastIndex = Math.max(re.lastIndex, end);
+      if (/\/Subtype\s*\/Image/.test(dict) || !/\/FlateDecode/.test(dict)) continue;
+      try {
+        yield latin1(unzlibSync(bytes.subarray(start, end)));
+      } catch (e) {
+      }
+    }
+  }
+  function pdfTextLines(bytes) {
+    const out = [];
+    for (const content of streams(bytes)) {
+      const items = [];
+      for (const bt of content.match(/BT[\s\S]*?ET/g) || []) {
+        let x2 = 0, y = 0;
+        const tok = /(-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) Tm|(-?[\d.]+) (-?[\d.]+) T[dD]|\(((?:\\[\s\S]|[^\\)])*)\)\s*Tj/g;
+        for (const t of bt.matchAll(tok)) {
+          if (t[1] !== void 0) {
+            x2 = Number(t[5]);
+            y = Number(t[6]);
+          } else if (t[7] !== void 0) {
+            x2 += Number(t[7]);
+            y += Number(t[8]);
+          } else items.push({ y, x: x2, text: unescapePdfString(t[9]) });
+        }
+      }
+      items.sort((a, b) => b.y - a.y || a.x - b.x);
+      out.push(...items.map((i2) => i2.text));
+    }
+    return out;
+  }
+
+  // src/core/estadoCuenta.js
+  var AMOUNT = /-?[\d.]+,\d\d/g;
+  var COL_USD = 114;
+  var COL_UYU = 100;
+  var VENTANA_DIAS = 7;
+  var DAY3 = 864e5;
+  var r2 = (n) => Math.round(n * 100) / 100;
+  var num = (s) => Number(s.replace(/\./g, "").replace(",", "."));
+  var fechaISO = (d, m, y) => `20${y}-${m}-${d}`;
+  function montos(line) {
+    const out = {};
+    for (const m of line.matchAll(AMOUNT)) {
+      const end = m.index + m[0].length;
+      if (end >= COL_USD) out.USD = num(m[0]);
+      else if (end >= COL_UYU) out.UYU = num(m[0]);
+    }
+    return out;
+  }
+  var CARGO_BANCO = /SEGURO DE VIDA|REDUC\.? IVA|INTERES|COMISION|RECARGO|IMPUESTO|IVA S\/?/i;
+  function parseEstadoCuenta(lines) {
+    let cierre = null;
+    const items = [];
+    for (const line of lines) {
+      const c = /^\s*(\d\d)\/(\d\d)\/(\d\d)\s*$/.exec(line);
+      if (c && !cierre) {
+        cierre = fechaISO(c[1], c[2], c[3]);
+        continue;
+      }
+      const m = /^\s*(\d\d) (\d\d) (\d\d)\s+(\d{4})\s+(.+?)(?:\s{2,}|$)/.exec(line);
+      if (m) {
+        const resto = line.slice(m.index + m[0].length);
+        const primerMonto = resto.search(AMOUNT);
+        const q = /(\d{1,2})\/\s?(\d{1,2})/.exec(primerMonto >= 0 ? resto.slice(0, primerMonto) : resto);
+        const base = { fecha: fechaISO(m[1], m[2], m[3]), tarjeta: m[4], comercio: m[5].trim(), cuota: q ? { n: Number(q[1]), de: Number(q[2]) } : null };
+        const a = montos(line);
+        if (a.UYU !== void 0) items.push({ ...base, monto: a.UYU, moneda: "UYU" });
+        else if (a.USD !== void 0) items.push({ ...base, monto: a.USD, moneda: "USD" });
+        continue;
+      }
+      const lead = line.length - line.trimStart().length;
+      const texto = line.trim();
+      if (lead >= 26 && lead <= 30 && !/^SALDO|^PAGOS/.test(texto) && CARGO_BANCO.test(texto)) {
+        const comercio = texto.replace(AMOUNT, "").trim();
+        const a = montos(line);
+        for (const moneda of ["UYU", "USD"]) if (a[moneda]) items.push({ fecha: null, tarjeta: "", comercio, cuota: null, monto: a[moneda], moneda });
+      }
+    }
+    for (const i2 of items) if (!i2.fecha) i2.fecha = cierre;
+    return { cierre, items };
+  }
+  var NO_CRUZAR = /* @__PURE__ */ new Set(["transferencia", "consumo_debito", "pago_tarjeta"]);
+  var dias = (a, b) => Math.abs(Date.parse(a) - Date.parse(b)) / DAY3;
+  function conciliar(ec2, existentes, ctx) {
+    const pool = existentes.filter((m) => !NO_CRUZAR.has(m.tipo)).map((m) => ({ m, usado: false }));
+    const buscar = (moneda, monto, fecha, tol) => {
+      let best = null;
+      for (const p of pool) {
+        if (p.usado || p.m.moneda !== moneda || Math.abs(Number(p.m.monto_orig) - monto) > tol) continue;
+        const d = dias(p.m.fecha, fecha);
+        if (d <= VENTANA_DIAS && (!best || d < best.d)) best = { p, d };
+      }
+      if (best) best.p.usado = true;
+      return !!best;
+    };
+    let pendientes = [];
+    for (const it of ec2.items) {
+      if (!it.fecha || it.fecha < (ctx.desde || "")) continue;
+      if (it.cuota && it.cuota.n > 1) continue;
+      const total = it.cuota ? r2(it.monto * it.cuota.de) : it.monto;
+      const tol = it.cuota ? it.cuota.de * 0.01 + 0.02 : 5e-3;
+      if (!buscar(it.moneda, total, it.fecha, tol)) pendientes.push({ ...it, total });
+    }
+    const esIva = (i2) => /REDUC\.? IVA/i.test(i2.comercio);
+    for (const iva of pendientes.filter(esIva)) {
+      const compra = pendientes.find((c) => !esIva(c) && c.fecha === iva.fecha && c.moneda === iva.moneda && buscar(c.moneda, r2(c.total + iva.total), c.fecha, 0.01));
+      if (compra) pendientes = pendientes.filter((i2) => i2 !== compra && i2 !== iva);
+    }
+    const porGrupo = (clave) => {
+      const grupos = /* @__PURE__ */ new Map();
+      for (const it of pendientes) grupos.set(clave(it), [...grupos.get(clave(it)) || [], it]);
+      for (const g of grupos.values()) {
+        if (g.length < 2) continue;
+        const suma = r2(g.reduce((a, i2) => a + i2.total, 0));
+        if (buscar(g[0].moneda, suma, g[0].fecha, 0.01 * g.length)) pendientes = pendientes.filter((i2) => !g.includes(i2));
+      }
+    };
+    porGrupo((it) => `${it.fecha}|${it.moneda}|${it.comercio.split(/\s+/)[0]}`);
+    porGrupo((it) => `${it.fecha}|${it.moneda}`);
+    const nuevos = [];
+    const vistos = /* @__PURE__ */ new Map();
+    for (const it of pendientes) {
+      const key2 = `${it.fecha}-${it.tarjeta || "banco"}-${it.total}-${it.moneda}`;
+      const k = (vistos.get(key2) || 0) + 1;
+      vistos.set(key2, k);
+      const draft = {
+        id: `edc-${key2}-${k}`,
+        fecha: it.fecha,
+        tipo: "consumo_credito",
+        medio: it.tarjeta ? `Visa ${it.tarjeta}` : "Visa",
+        comercio_raw: it.comercio,
+        cuenta_destino: "",
+        banco_destino: "",
+        monto_orig: it.total,
+        moneda: it.moneda
+      };
+      const rate = ctx.rateFor ? safe(() => ctx.rateFor(it.fecha)) : null;
+      const mov = buildMovimiento(draft, ctx, rate, ctx.now || "", "estado_cuenta");
+      if (!it.tarjeta || CARGO_BANCO.test(it.comercio)) Object.assign(mov, { categoria: "Bancos/Comisiones", clasificado_por: "regla_contiene", revisado: true });
+      mov.nota = it.cuota ? `Compra en ${it.cuota.de} cuotas · agregado desde el estado de cuenta` : "Agregado desde el estado de cuenta (no llegó aviso)";
+      nuevos.push(mov);
+    }
+    return nuevos;
+  }
+  function safe(f) {
+    try {
+      return f() || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // apps-script/main.js
   var SENDER = "comunicaciones@itau.com.uy";
   var LABEL_OK = "Finanzas/Procesado";
   var LABEL_REVISAR = "Finanzas/Revisar";
   var DAILY_LOOKBACK = "newer_than:7d";
+  var EDC_SENDER = "info-mail@itau.com.uy";
+  var LABEL_EDC = "Finanzas/EstadoCuenta";
+  var EDC_DESDE = "2026-01-01";
   var TIME_BUDGET_MS = 4 * 60 * 1e3;
   var PAGE = 20;
   var GROW_ROWS = 500;
@@ -692,8 +1256,8 @@ var FH = (() => {
       sh = ss.insertSheet(tab.name);
       sh.getRange(1, 1, 1, tab.columns.length).setValues([tab.columns]).setFontWeight("bold");
       sh.setFrozenRows(1);
-      tab.columns.forEach((c, i) => {
-        if (TEXT_COLS.has(c)) sh.getRange(1, i + 1, sh.getMaxRows(), 1).setNumberFormat("@");
+      tab.columns.forEach((c, i2) => {
+        if (TEXT_COLS.has(c)) sh.getRange(1, i2 + 1, sh.getMaxRows(), 1).setNumberFormat("@");
       });
     }
     return sh;
@@ -703,7 +1267,7 @@ var FH = (() => {
     const n = sh.getLastRow() - 1;
     if (n < 1) return [];
     const values = sh.getRange(2, 1, n, tab.columns.length).getValues();
-    return values.map((row, i) => ({ ...rowToObj(tab.columns, row.map((v) => v instanceof Date ? Utilities.formatDate(v, "America/Montevideo", "yyyy-MM-dd") : v)), _row: i + 2 }));
+    return values.map((row, i2) => ({ ...rowToObj(tab.columns, row.map((v) => v instanceof Date ? Utilities.formatDate(v, "America/Montevideo", "yyyy-MM-dd") : v)), _row: i2 + 2 }));
   }
   function append(tab, objs) {
     if (!objs.length) return;
@@ -711,8 +1275,8 @@ var FH = (() => {
     const first = sh.getLastRow() + 1;
     const need = first + objs.length - 1;
     if (sh.getMaxRows() < need) sh.insertRowsAfter(sh.getMaxRows(), Math.max(objs.length, GROW_ROWS));
-    tab.columns.forEach((c, i) => {
-      if (TEXT_COLS.has(c)) sh.getRange(first, i + 1, objs.length, 1).setNumberFormat("@");
+    tab.columns.forEach((c, i2) => {
+      if (TEXT_COLS.has(c)) sh.getRange(first, i2 + 1, objs.length, 1).setNumberFormat("@");
     });
     sh.getRange(first, 1, objs.length, tab.columns.length).setValues(objs.map((o) => objToRow(tab.columns, o)));
   }
@@ -745,18 +1309,18 @@ var FH = (() => {
       });
       if (res.getResponseCode() !== 200) throw new Error(`BCU HTTP ${res.getResponseCode()}`);
       const known = new Set(cache.map((c) => c.fecha));
-      const fresh = parseBcuResponse(res.getContentText()).filter((r3) => !known.has(r3.fecha)).map((r3) => ({ ...r3, fuente: "BCU 2222 TCV" }));
+      const fresh = parseBcuResponse(res.getContentText()).filter((r4) => !known.has(r4.fecha)).map((r4) => ({ ...r4, fuente: "BCU 2222 TCV" }));
       append(TABS.cotizaciones, fresh);
       cache = cache.concat(fresh);
-      const r2 = pickRate(cache, fecha);
-      return r2 ? Number(r2.usd_uyu) : null;
+      const r3 = pickRate(cache, fecha);
+      return r3 ? Number(r3.usd_uyu) : null;
     };
   }
   function label(name) {
     return GmailApp.getUserLabelByName(name) || GmailApp.createLabel(name);
   }
-  function collect(query, start, max, deadline) {
-    const threads = GmailApp.search(query, start, max);
+  function collect(query, start, max2, deadline) {
+    const threads = GmailApp.search(query, start, max2);
     const msgs = [];
     let count = 0;
     for (const t of threads) {
@@ -787,6 +1351,39 @@ var FH = (() => {
     for (const m of msgs) (revisar.has(m.id) ? bad : ok).addToThread(m.thread);
     return result;
   }
+  function conciliarEstados(deadline) {
+    const q = `from:${EDC_SENDER} subject:"estado de cuenta Visa" has:attachment after:${EDC_DESDE.replace(/-/g, "/")} -label:${LABEL_EDC.replace("/", "-")}`;
+    const threads = GmailApp.search(q, 0, 24);
+    const msgs = [];
+    for (const t of threads) for (const m of t.getMessages()) msgs.push({ m, t });
+    msgs.sort((a, b) => a.m.getDate() - b.m.getDate());
+    if (!msgs.length) return { estados: 0, agregados: 0 };
+    let movs = readAll(TABS.movimientos);
+    const ids = new Set(movs.map((m) => String(m.id)));
+    const ctx = { reglas: readAll(TABS.reglas), cuentas: readAll(TABS.cuentas), desde: EDC_DESDE, now: nowMontevideoIso(), rateFor: makeRateProvider() };
+    const ok = label(LABEL_EDC);
+    let estados = 0, agregados = 0;
+    for (const { m, t } of msgs) {
+      if (deadline && Date.now() > deadline) break;
+      const pdf = m.getAttachments().find((a) => /\.pdf$/i.test(a.getName()));
+      if (!pdf) continue;
+      const ec2 = parseEstadoCuenta(pdfTextLines(Uint8Array.from(pdf.getBytes(), (b) => b & 255)));
+      if (!ec2.cierre || !ec2.items.length) {
+        log("aviso", "estado_cuenta_no_leido", `No pude leer el estado de cuenta "${m.getSubject()}" del ${m.getDate().toISOString().slice(0, 10)}`, m.getId());
+        label(LABEL_REVISAR).addToThread(t);
+        continue;
+      }
+      const nuevos = conciliar(ec2, movs, ctx).filter((n) => !ids.has(n.id));
+      append(TABS.movimientos, nuevos);
+      for (const n of nuevos) ids.add(n.id);
+      movs = movs.concat(nuevos);
+      ok.addToThread(t);
+      estados++;
+      agregados += nuevos.length;
+      log("info", "estado_cuenta", `cierre=${ec2.cierre} lineas=${ec2.items.length} agregados=${nuevos.length}`, m.getId());
+    }
+    return { estados, agregados };
+  }
   function syncInversiones() {
     const sh = SpreadsheetApp.getActive().getSheetByName("Inversiones");
     if (!sh) return 0;
@@ -804,7 +1401,7 @@ var FH = (() => {
     const reglas = readAll(TABS.reglas);
     const nuevas = consolidate(reglas, nowMontevideoIso());
     append(TABS.reglas, nuevas);
-    if (nuevas.length) log("info", "reglas_agrupadas", nuevas.map((r2) => `${r2.patron}→${r2.categoria}`).join(", "));
+    if (nuevas.length) log("info", "reglas_agrupadas", nuevas.map((r3) => `${r3.patron}→${r3.categoria}`).join(", "));
     const movs = readAll(TABS.movimientos);
     const cuentas = readAll(TABS.cuentas);
     const reclasificados = applyToSimilar(movs, reglas.concat(nuevas), cuentas);
@@ -850,20 +1447,25 @@ var FH = (() => {
         msgs.push(...page.msgs);
         if (page.total < 100) break;
       }
-      const r2 = runBatch(msgs, "gmail");
+      const r3 = runBatch(msgs, "gmail");
       PropertiesService.getScriptProperties().setProperty("LAST_OK", (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
+      try {
+        conciliarEstados(Date.now() + TIME_BUDGET_MS);
+      } catch (e) {
+        log("aviso", "estado_cuenta", e.message);
+      }
       const m = mantenimiento();
-      log("info", "ejecucion", `nuevos=${r2.nuevos} revisar=${r2.revisar.length} reglas=${m.reglas} reclasificados=${m.reclasificados}`);
-      return r2;
+      log("info", "ejecucion", `nuevos=${r3.nuevos} revisar=${r3.revisar.length} reglas=${m.reglas} reclasificados=${m.reclasificados}`);
+      return r3;
     });
   }
   function procesarAhora() {
-    const r2 = procesarDiario();
-    if (!r2) {
+    const r3 = procesarDiario();
+    if (!r3) {
       SpreadsheetApp.getUi().alert("Hay otra ejecución en curso. Probá en un minuto.");
       return;
     }
-    SpreadsheetApp.getUi().alert(`Listo: ${r2.nuevos} movimientos nuevos, ${r2.revisar.length} mails para revisar.`);
+    SpreadsheetApp.getUi().alert(`Listo: ${r3.nuevos} movimientos nuevos, ${r3.revisar.length} mails para revisar.`);
   }
   function consolidarReglas() {
     const m = withLock(mantenimiento);
@@ -927,7 +1529,7 @@ var FH = (() => {
     if (!readAll(TABS.categorias).length) append(TABS.categorias, SEED_CATEGORIAS);
     if (!readAll(TABS.reglas).length) {
       const now = nowMontevideoIso();
-      append(TABS.reglas, SEED_REGLAS.map((r2, i) => ({ id: `s${i + 1}`, quien: "", origen: "semilla", usos: 0, creada: now, modificada: now, ...r2 })));
+      append(TABS.reglas, SEED_REGLAS.map((r3, i2) => ({ id: `s${i2 + 1}`, quien: "", origen: "semilla", usos: 0, creada: now, modificada: now, ...r3 })));
     }
     label(LABEL_OK);
     label(LABEL_REVISAR);
@@ -955,8 +1557,16 @@ var FH = (() => {
     const n = withLock(mantenimiento);
     return n;
   }
+  function conciliarEstadosAhora() {
+    const r3 = withLock(() => conciliarEstados(Date.now() + TIME_BUDGET_MS));
+    if (!r3) {
+      SpreadsheetApp.getUi().alert("Hay otra ejecución en curso. Probá en un minuto.");
+      return;
+    }
+    SpreadsheetApp.getUi().alert(r3.estados ? `Listo: revisé ${r3.estados} estado(s) de cuenta y agregué ${r3.agregados} movimientos que no habían llegado por aviso.` : "No hay estados de cuenta nuevos para revisar.");
+  }
   function onOpen() {
-    SpreadsheetApp.getUi().createMenu("Finanzas").addItem("Procesar ahora", "procesarAhora").addItem("Consolidar reglas", "consolidarReglas").addItem("Reconstruir historial…", "reconstruir").addItem("Importar planilla vieja (hasta 2025)", "importarPlanillaVieja").addItem("Sincronizar Inversiones", "sincronizarInversiones").addSeparator().addItem("Configurar (primera vez)", "configurar").addToUi();
+    SpreadsheetApp.getUi().createMenu("Finanzas").addItem("Procesar ahora", "procesarAhora").addItem("Consolidar reglas", "consolidarReglas").addItem("Reconstruir historial…", "reconstruir").addItem("Importar planilla vieja (hasta 2025)", "importarPlanillaVieja").addItem("Sincronizar Inversiones", "sincronizarInversiones").addItem("Conciliar estados de cuenta VISA", "conciliarEstadosAhora").addSeparator().addItem("Configurar (primera vez)", "configurar").addToUi();
   }
   return __toCommonJS(main_exports);
 })();
@@ -970,3 +1580,4 @@ function configurar() { return FH.configurar.apply(null, arguments); }
 function onOpen() { return FH.onOpen.apply(null, arguments); }
 function importarPlanillaVieja() { return FH.importarPlanillaVieja.apply(null, arguments); }
 function sincronizarInversiones() { return FH.sincronizarInversiones.apply(null, arguments); }
+function conciliarEstadosAhora() { return FH.conciliarEstadosAhora.apply(null, arguments); }
