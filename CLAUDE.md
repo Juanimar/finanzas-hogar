@@ -20,6 +20,7 @@ Gmail (avisos Itaú) ──► Apps Script (diario 06:00 MVD) ──► Google S
   - `legacy.js`: importa la pestaña vieja "Gastos Mensuales" (jul 2024 a dic 2025).
   - `inversiones.js`: sincroniza la pestaña "Inversiones" (depósitos en USD) como Ahorro/Inversión.
   - `pdf.js` + `estadoCuenta.js`: leen el PDF mensual del estado de cuenta VISA (mail de info-mail@itau.com.uy) y agregan lo que no llegó por aviso. Itaú **no manda aviso** de muchos consumos (Mercado Pago, Uber exterior, tarjeta 1013, seguro de vida). Reglas del cruce: ventana ±7 días, cuotas 2..N se ignoran (la 1/N se compara contra cuota×N), compra + "REDUC. IVA" = monto neto del aviso, varias líneas del mismo día pueden sumar un solo aviso (eBay, propinas). Probado contra los estados de cuenta reales de 2026; **no commitear PDFs reales** (el repo es público).
+  - `push.js`: notificaciones de la app de Itaú en el Android de Juani, reenviadas por MacroDroid a `doPost` (aplicación web del script, protegida con `PUSH_TOKEN` en Script Properties; menú "Configurar push de Android"). Entran al instante con `origen: push`; el mail posterior del mismo consumo se descarta en `pipeline.js` (misma tarjeta, monto y moneda, ±1 día). Formatos de push no reconocidos quedan en Log como `push_no_leido`.
 - **`apps-script/main.js`**: los puntos de entrada del script, como el menú "Finanzas", `procesarDiario` y `continuarReconstruccion`. Se empaqueta con esbuild en **`dist/Code.gs`**, que es un archivo generado y no se edita a mano. Las funciones globales se declaran en `ENTRY_POINTS` de `scripts/build-gas.mjs`.
 - **`app/`**: PWA en Preact + Vite. Entra con Google Identity Services y habla directo con la API de Sheets (lee con UNFORMATTED_VALUE y escribe con RAW). Con `?demo=1` usa datos de ejemplo, sin login.
   - Pantallas: Resumen (con selector Mes/Año) · Revisar (clasificación con un toque) · Categorías · Movimientos.
@@ -31,7 +32,7 @@ ID: `1jyPGemEDElKxN4lxUPTmoHLAXvkbf249idA_bsWw9HI` ("Finanzas Juani-Mili"). Las 
 
 | Pestaña | Contenido |
 |---|---|
-| Movimientos | Un movimiento por fila. `parte` (última columna) = fracción propia de un gasto dividido; vacía = todo. Los montos del banco no se tocan: todo total usa `efectivo()` de `money.js`. `origen`: gmail / historico / manual. `clasificado_por`: cuenta / regla_exacta / regla_contiene / manual / lote / pendiente |
+| Movimientos | Un movimiento por fila. `parte` (última columna) = fracción propia de un gasto dividido; vacía = todo. Los montos del banco no se tocan: todo total usa `efectivo()` de `money.js`. `origen`: gmail / push / estado_cuenta / historico / manual. `clasificado_por`: cuenta / regla_exacta / regla_contiene / manual / lote / pendiente |
 | Reglas | `exacta` o `contiene` (por palabra entera sobre el comercio normalizado) |
 | Cuentas | Tarjetas y cuentas propias (`tarjeta_propia`, `propia_interna`, `propia_ahorro`) y cuentas de terceros con nombre y categoría |
 | Categorías | Grupos: Fijos, Variables, No es gasto, Ingresos |

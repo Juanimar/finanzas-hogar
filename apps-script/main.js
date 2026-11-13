@@ -1,16 +1,17 @@
-/* global SpreadsheetApp, GmailApp, UrlFetchApp, PropertiesService, ScriptApp, LockService, Utilities */
+/* global SpreadsheetApp, GmailApp, UrlFetchApp, PropertiesService, ScriptApp, LockService, Utilities, ContentService */
 import { TABS, rowToObj, objToRow } from '../src/core/schema.js';
 import { SEED_CATEGORIAS, SEED_REGLAS } from '../src/core/seed.js';
 import { processMessages, fillMissingRates } from '../src/core/pipeline.js';
 import { applyToSimilar } from '../src/core/classify.js';
 import { consolidate } from '../src/core/learn.js';
 import { pickRate, buildBcuRequest, parseBcuResponse, BCU_URL } from '../src/core/money.js';
-import { nowMontevideoIso } from '../src/core/dates.js';
+import { nowMontevideoIso, toMontevideoDate } from '../src/core/dates.js';
 import { htmlToText } from '../src/core/html.js';
 import { importLegacyRows } from '../src/core/legacy.js';
 import { inversionesToMovs } from '../src/core/inversiones.js';
 import { pdfTextLines } from '../src/core/pdf.js';
 import { parseEstadoCuenta, conciliar } from '../src/core/estadoCuenta.js';
+import { pushToMovimiento } from '../src/core/push.js';
 
 const SENDER = 'comunicaciones@itau.com.uy';
 const LABEL_OK = 'Finanzas/Procesado';
@@ -345,6 +346,41 @@ export function conciliarEstadosAhora() {
     : 'No hay estados de cuenta nuevos para revisar.');
 }
 
+// ---------- Push de Android (MacroDroid → aplicación web) ----------
+
+/** Recibe {token, title, text} de MacroDroid cuando llega una notificación de la app de Itaú. */
+export function doPost(e) {
+  const out = s => ContentService.createTextOutput(s);
+  let body;
+  try { body = JSON.parse(e.postData.contents); } catch (err) { return out('json inválido'); }
+  const token = PropertiesService.getScriptProperties().getProperty('PUSH_TOKEN');
+  if (!token || body.token !== token) return out('no autorizado');
+  const text = [body.title, body.text].filter(Boolean).join(' ').trim();
+  if (!text) return out('vacío');
+  const at = new Date().toISOString();
+  return withLock(() => {
+    let rate = null;
+    try { rate = makeRateProvider()(toMontevideoDate(at)); } catch (err) { /* se completa en el mantenimiento */ }
+    const r = pushToMovimiento(text, at, { reglas: readAll(TABS.reglas), cuentas: readAll(TABS.cuentas) }, rate, nowMontevideoIso());
+    if (!r.ok) {
+      if (/consumo|tarjeta|transferencia|d[eé]bito/i.test(text)) log('aviso', 'push_no_leido', text.slice(0, 300));
+      return out('ignorado');
+    }
+    if (readAll(TABS.movimientos).some(m => String(m.id) === r.mov.id)) return out('repetido');
+    append(TABS.movimientos, [r.mov]);
+    log('info', 'push', `${r.mov.comercio_raw} ${r.mov.moneda} ${r.mov.monto_orig}`, r.mov.id);
+    return out('ok');
+  }) || out('ocupado');
+}
+
+export function configurarPush() {
+  const props = PropertiesService.getScriptProperties();
+  let token = props.getProperty('PUSH_TOKEN');
+  if (!token) { token = Utilities.getUuid().replace(/-/g, ''); props.setProperty('PUSH_TOKEN', token); }
+  const url = ScriptApp.getService().getUrl() || '(todavía no publicaste la aplicación web)';
+  SpreadsheetApp.getUi().alert(`Datos para MacroDroid\n\nDirección:\n${url}\n\nClave:\n${token}\n\nNo compartas la clave: con ella cualquiera podría agregar movimientos.`);
+}
+
 export function onOpen() {
   SpreadsheetApp.getUi().createMenu('Finanzas')
     .addItem('Procesar ahora', 'procesarAhora')
@@ -353,6 +389,7 @@ export function onOpen() {
     .addItem('Importar planilla vieja (hasta 2025)', 'importarPlanillaVieja')
     .addItem('Sincronizar Inversiones', 'sincronizarInversiones')
     .addItem('Conciliar estados de cuenta VISA', 'conciliarEstadosAhora')
+    .addItem('Configurar push de Android', 'configurarPush')
     .addSeparator()
     .addItem('Configurar (primera vez)', 'configurar')
     .addToUi();

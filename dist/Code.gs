@@ -23,8 +23,10 @@ var FH = (() => {
   __export(main_exports, {
     conciliarEstadosAhora: () => conciliarEstadosAhora,
     configurar: () => configurar,
+    configurarPush: () => configurarPush,
     consolidarReglas: () => consolidarReglas,
     continuarReconstruccion: () => continuarReconstruccion,
+    doPost: () => doPost,
     importarPlanillaVieja: () => importarPlanillaVieja,
     onOpen: () => onOpen,
     procesarAhora: () => procesarAhora,
@@ -439,6 +441,12 @@ var FH = (() => {
   function processMessages(messages, store, rateProvider, now, origen = "gmail") {
     const nuevos = [];
     const keys = new Set((store.existing || []).map(dupKey));
+    const pushes = (store.existing || []).filter((m) => m.origen === "push").map((m) => ({ m, usado: false }));
+    const yaPorPush = (d) => {
+      const p = pushes.find((x2) => !x2.usado && x2.m.medio === d.medio && Number(x2.m.monto_orig) === Number(d.monto_orig) && x2.m.moneda === d.moneda && Math.abs(Date.parse(x2.m.fecha) - Date.parse(d.fecha)) <= 864e5);
+      if (p) p.usado = true;
+      return !!p;
+    };
     const revisar = [];
     let ignorados = 0;
     for (const msg of messages) {
@@ -454,6 +462,7 @@ var FH = (() => {
       }
       for (const d of parsed.movs) {
         if (store.hasId(d.id) || nuevos.some((n) => n.id === d.id)) continue;
+        if (yaPorPush(d)) continue;
         const mov = buildMovimiento(d, store, safeRate(rateProvider, d.fecha), now, origen);
         const k = dupKey(mov);
         if (keys.has(k)) Object.assign(mov, { revisado: false, nota: DUP_NOTE });
@@ -1231,6 +1240,43 @@ var FH = (() => {
     }
   }
 
+  // src/core/push.js
+  var MONEDA = { UYU: "UYU", $: "UYU", USD: "USD", U$S: "USD", "US$": "USD" };
+  var CREDITO = /tarjeta\s+VISA\s+Nro\.?\s*\*+\s*(\d{4})\s+por\s+(UYU|USD|U\$S|US\$|\$)\s*([\d.,]+?)\s+en\s+(.+?)\.?\s*$/i;
+  var num2 = (s) => Number(/,\d{1,2}$/.test(s) ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, ""));
+  function parsePush(text, receivedAt) {
+    const t = String(text || "").replace(/\s+/g, " ").trim();
+    const m = CREDITO.exec(t);
+    if (!m) return { ok: false, reason: "Formato de push no reconocido" };
+    const monto = num2(m[3]);
+    if (!Number.isFinite(monto)) return { ok: false, reason: `Monto inválido: ${m[3]}` };
+    return {
+      ok: true,
+      mov: {
+        fecha: toMontevideoDate(receivedAt),
+        tipo: "consumo_credito",
+        medio: `Visa ${m[1]}`,
+        monto_orig: monto,
+        moneda: MONEDA[m[2].toUpperCase()],
+        comercio_raw: m[4].trim(),
+        cuenta_destino: "",
+        banco_destino: ""
+      }
+    };
+  }
+  function hash(s) {
+    let h = 5381;
+    for (let i2 = 0; i2 < s.length; i2++) h = (h * 33 ^ s.charCodeAt(i2)) >>> 0;
+    return h.toString(36);
+  }
+  function pushToMovimiento(text, receivedAt, ctx, rate, now) {
+    const p = parsePush(text, receivedAt);
+    if (!p.ok) return p;
+    const bucket = Math.floor(Date.parse(receivedAt) / 6e5);
+    const id = `push-${hash(`${p.mov.medio}|${p.mov.monto_orig}|${p.mov.moneda}|${p.mov.comercio_raw}|${bucket}`)}`;
+    return { ok: true, mov: buildMovimiento({ ...p.mov, id }, ctx, rate, now, "push") };
+  }
+
   // apps-script/main.js
   var SENDER = "comunicaciones@itau.com.uy";
   var LABEL_OK = "Finanzas/Procesado";
@@ -1565,8 +1611,56 @@ var FH = (() => {
     }
     SpreadsheetApp.getUi().alert(r3.estados ? `Listo: revisé ${r3.estados} estado(s) de cuenta y agregué ${r3.agregados} movimientos que no habían llegado por aviso.` : "No hay estados de cuenta nuevos para revisar.");
   }
+  function doPost(e) {
+    const out = (s) => ContentService.createTextOutput(s);
+    let body;
+    try {
+      body = JSON.parse(e.postData.contents);
+    } catch (err2) {
+      return out("json inválido");
+    }
+    const token = PropertiesService.getScriptProperties().getProperty("PUSH_TOKEN");
+    if (!token || body.token !== token) return out("no autorizado");
+    const text = [body.title, body.text].filter(Boolean).join(" ").trim();
+    if (!text) return out("vacío");
+    const at = (/* @__PURE__ */ new Date()).toISOString();
+    return withLock(() => {
+      let rate = null;
+      try {
+        rate = makeRateProvider()(toMontevideoDate(at));
+      } catch (err2) {
+      }
+      const r3 = pushToMovimiento(text, at, { reglas: readAll(TABS.reglas), cuentas: readAll(TABS.cuentas) }, rate, nowMontevideoIso());
+      if (!r3.ok) {
+        if (/consumo|tarjeta|transferencia|d[eé]bito/i.test(text)) log("aviso", "push_no_leido", text.slice(0, 300));
+        return out("ignorado");
+      }
+      if (readAll(TABS.movimientos).some((m) => String(m.id) === r3.mov.id)) return out("repetido");
+      append(TABS.movimientos, [r3.mov]);
+      log("info", "push", `${r3.mov.comercio_raw} ${r3.mov.moneda} ${r3.mov.monto_orig}`, r3.mov.id);
+      return out("ok");
+    }) || out("ocupado");
+  }
+  function configurarPush() {
+    const props = PropertiesService.getScriptProperties();
+    let token = props.getProperty("PUSH_TOKEN");
+    if (!token) {
+      token = Utilities.getUuid().replace(/-/g, "");
+      props.setProperty("PUSH_TOKEN", token);
+    }
+    const url = ScriptApp.getService().getUrl() || "(todavía no publicaste la aplicación web)";
+    SpreadsheetApp.getUi().alert(`Datos para MacroDroid
+
+Dirección:
+${url}
+
+Clave:
+${token}
+
+No compartas la clave: con ella cualquiera podría agregar movimientos.`);
+  }
   function onOpen() {
-    SpreadsheetApp.getUi().createMenu("Finanzas").addItem("Procesar ahora", "procesarAhora").addItem("Consolidar reglas", "consolidarReglas").addItem("Reconstruir historial…", "reconstruir").addItem("Importar planilla vieja (hasta 2025)", "importarPlanillaVieja").addItem("Sincronizar Inversiones", "sincronizarInversiones").addItem("Conciliar estados de cuenta VISA", "conciliarEstadosAhora").addSeparator().addItem("Configurar (primera vez)", "configurar").addToUi();
+    SpreadsheetApp.getUi().createMenu("Finanzas").addItem("Procesar ahora", "procesarAhora").addItem("Consolidar reglas", "consolidarReglas").addItem("Reconstruir historial…", "reconstruir").addItem("Importar planilla vieja (hasta 2025)", "importarPlanillaVieja").addItem("Sincronizar Inversiones", "sincronizarInversiones").addItem("Conciliar estados de cuenta VISA", "conciliarEstadosAhora").addItem("Configurar push de Android", "configurarPush").addSeparator().addItem("Configurar (primera vez)", "configurar").addToUi();
   }
   return __toCommonJS(main_exports);
 })();
@@ -1581,3 +1675,5 @@ function onOpen() { return FH.onOpen.apply(null, arguments); }
 function importarPlanillaVieja() { return FH.importarPlanillaVieja.apply(null, arguments); }
 function sincronizarInversiones() { return FH.sincronizarInversiones.apply(null, arguments); }
 function conciliarEstadosAhora() { return FH.conciliarEstadosAhora.apply(null, arguments); }
+function doPost() { return FH.doPost.apply(null, arguments); }
+function configurarPush() { return FH.configurarPush.apply(null, arguments); }

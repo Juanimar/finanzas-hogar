@@ -29,6 +29,14 @@ export const DUP_NOTE = 'Posible duplicado: el mismo aviso llegó en dos mails';
 export function processMessages(messages, store, rateProvider, now, origen = 'gmail') {
   const nuevos = [];
   const keys = new Set((store.existing || []).map(dupKey));
+  // Lo que ya entró por push al instante: el mail que llega después no se vuelve a cargar.
+  const pushes = (store.existing || []).filter(m => m.origen === 'push').map(m => ({ m, usado: false }));
+  const yaPorPush = d => {
+    const p = pushes.find(x => !x.usado && x.m.medio === d.medio && Number(x.m.monto_orig) === Number(d.monto_orig) && x.m.moneda === d.moneda
+      && Math.abs(Date.parse(x.m.fecha) - Date.parse(d.fecha)) <= 86400000);
+    if (p) p.usado = true;
+    return !!p;
+  };
   const revisar = [];
   let ignorados = 0;
   for (const msg of messages) {
@@ -41,6 +49,7 @@ export function processMessages(messages, store, rateProvider, now, origen = 'gm
     }
     for (const d of parsed.movs) {
       if (store.hasId(d.id) || nuevos.some(n => n.id === d.id)) continue;
+      if (yaPorPush(d)) continue;
       const mov = buildMovimiento(d, store, safeRate(rateProvider, d.fecha), now, origen);
       const k = dupKey(mov);
       if (keys.has(k)) Object.assign(mov, { revisado: false, nota: DUP_NOTE });
