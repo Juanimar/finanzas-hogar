@@ -98,6 +98,10 @@ var FH = (() => {
       return v;
     });
   }
+  function celdaSegura(v) {
+    if (typeof v !== "string") return v;
+    return /^[=+@]/.test(v) || /^-[^\d.,\s]/.test(v) ? `'${v}` : v;
+  }
 
   // src/core/seed.js
   var NO_GASTO = ["Ahorro/Inversión", "Movimiento interno"];
@@ -1280,6 +1284,7 @@ var FH = (() => {
   // apps-script/main.js
   var SENDER = "comunicaciones@itau.com.uy";
   var LABEL_OK = "Finanzas/Procesado";
+  var REENVIADORES = ["juanmartinez.smc@gmail.com", "mmarizcurrena.smc@gmail.com"];
   var LABEL_REVISAR = "Finanzas/Revisar";
   var DAILY_LOOKBACK = "newer_than:7d";
   var EDC_SENDER = "info-mail@itau.com.uy";
@@ -1324,11 +1329,11 @@ var FH = (() => {
     tab.columns.forEach((c, i2) => {
       if (TEXT_COLS.has(c)) sh.getRange(first, i2 + 1, objs.length, 1).setNumberFormat("@");
     });
-    sh.getRange(first, 1, objs.length, tab.columns.length).setValues(objs.map((o) => objToRow(tab.columns, o)));
+    sh.getRange(first, 1, objs.length, tab.columns.length).setValues(objs.map((o) => objToRow(tab.columns, o).map(celdaSegura)));
   }
   function updateRows(tab, objs) {
     const sh = sheet(tab);
-    for (const o of objs) sh.getRange(o._row, 1, 1, tab.columns.length).setValues([objToRow(tab.columns, o)]);
+    for (const o of objs) sh.getRange(o._row, 1, 1, tab.columns.length).setValues([objToRow(tab.columns, o).map(celdaSegura)]);
   }
   function log(nivel, evento, detalle, ref) {
     try {
@@ -1373,7 +1378,8 @@ var FH = (() => {
       if (deadline && Date.now() > deadline && count > 0) break;
       count++;
       for (const m of t.getMessages()) {
-        if (!String(m.getFrom()).toLowerCase().includes(SENDER) && !/^fwd?:/i.test(m.getSubject())) continue;
+        const from = String(m.getFrom()).toLowerCase();
+        if (!from.includes(SENDER) && !(/^fwd?:/i.test(m.getSubject()) && REENVIADORES.some((r3) => from.includes(r3)))) continue;
         msgs.push({ id: m.getId(), subject: m.getSubject(), body: htmlToText(m.getBody()), date: m.getDate().toISOString(), thread: t });
       }
     }

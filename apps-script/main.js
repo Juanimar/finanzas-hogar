@@ -1,5 +1,5 @@
 /* global SpreadsheetApp, GmailApp, UrlFetchApp, PropertiesService, ScriptApp, LockService, Utilities, ContentService */
-import { TABS, rowToObj, objToRow } from '../src/core/schema.js';
+import { TABS, rowToObj, objToRow, celdaSegura } from '../src/core/schema.js';
 import { SEED_CATEGORIAS, SEED_REGLAS } from '../src/core/seed.js';
 import { processMessages, fillMissingRates } from '../src/core/pipeline.js';
 import { applyToSimilar } from '../src/core/classify.js';
@@ -15,6 +15,7 @@ import { pushToMovimiento } from '../src/core/push.js';
 
 const SENDER = 'comunicaciones@itau.com.uy';
 const LABEL_OK = 'Finanzas/Procesado';
+const REENVIADORES = ['juanmartinez.smc@gmail.com', 'mmarizcurrena.smc@gmail.com'];
 const LABEL_REVISAR = 'Finanzas/Revisar';
 const DAILY_LOOKBACK = 'newer_than:7d';
 // Estado de cuenta VISA mensual (PDF adjunto): red de seguridad para lo que no llegó por aviso.
@@ -63,12 +64,12 @@ function append(tab, objs) {
   const need = first + objs.length - 1;
   if (sh.getMaxRows() < need) sh.insertRowsAfter(sh.getMaxRows(), Math.max(objs.length, GROW_ROWS));
   tab.columns.forEach((c, i) => { if (TEXT_COLS.has(c)) sh.getRange(first, i + 1, objs.length, 1).setNumberFormat('@'); });
-  sh.getRange(first, 1, objs.length, tab.columns.length).setValues(objs.map(o => objToRow(tab.columns, o)));
+  sh.getRange(first, 1, objs.length, tab.columns.length).setValues(objs.map(o => objToRow(tab.columns, o).map(celdaSegura)));
 }
 
 function updateRows(tab, objs) {
   const sh = sheet(tab);
-  for (const o of objs) sh.getRange(o._row, 1, 1, tab.columns.length).setValues([objToRow(tab.columns, o)]);
+  for (const o of objs) sh.getRange(o._row, 1, 1, tab.columns.length).setValues([objToRow(tab.columns, o).map(celdaSegura)]);
 }
 
 function log(nivel, evento, detalle, ref) {
@@ -117,7 +118,9 @@ function collect(query, start, max, deadline) {
     if (deadline && Date.now() > deadline && count > 0) break;
     count++;
     for (const m of t.getMessages()) {
-      if (!String(m.getFrom()).toLowerCase().includes(SENDER) && !/^fwd?:/i.test(m.getSubject())) continue;
+      const from = String(m.getFrom()).toLowerCase();
+      // Reenvíos a mano ("Fwd:") solo si los manda uno de los dos.
+      if (!from.includes(SENDER) && !(/^fwd?:/i.test(m.getSubject()) && REENVIADORES.some(r => from.includes(r)))) continue;
       // Itaú sends HTML-only mails; convert ourselves instead of relying on getPlainBody().
       msgs.push({ id: m.getId(), subject: m.getSubject(), body: htmlToText(m.getBody()), date: m.getDate().toISOString(), thread: t });
     }

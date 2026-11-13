@@ -39,3 +39,19 @@ describe('seeds', () => {
     for (const r of SEED_REGLAS) expect(names.has(r.categoria), r.patron).toBe(true);
   });
 });
+
+import { celdaSegura } from '../src/core/schema.js';
+describe('celdaSegura (Apps Script escribe con setValues, que interpreta fórmulas)', () => {
+  it('neutraliza textos que Sheets tomaría como fórmula', () => {
+    expect(celdaSegura('=IMPORTXML("http://x","//a")')).toBe('\'=IMPORTXML("http://x","//a")');
+    expect(celdaSegura('+5')).toBe("'+5");
+    expect(celdaSegura('@algo')).toBe("'@algo");
+    expect(celdaSegura('-HYPERLINK(1)')).toBe("'-HYPERLINK(1)");
+  });
+  it('no toca números, fechas ni textos comunes', () => {
+    expect(celdaSegura(-35.04)).toBe(-35.04);
+    expect(celdaSegura('-35,04')).toBe('-35,04');
+    expect(celdaSegura('MERPAGO*SRV Barra')).toBe('MERPAGO*SRV Barra');
+    expect(celdaSegura(true)).toBe(true);
+  });
+});

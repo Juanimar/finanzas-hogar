@@ -62,7 +62,7 @@ npm run build:app        # build de la PWA
 - Moneda: se guarda la original más la conversión con el BCU del día. La UI tiene un selector UYU/USD.
 - Las compras con tarjeta cuentan en la fecha de compra.
 - "Quién": Compartido por defecto; las tarjetas propias de Mili van como Mili.
-- Circuito del dólar: los pesos que van a Mili (OCA Blue 7361576) son internos. El giro a BROU 00155919900004 es Ahorro/Inversión.
+- Circuito del dólar: los pesos que van a la cuenta OCA Blue de Mili son internos; el giro a la cuenta BROU de inversión es Ahorro/Inversión (los números están en la pestaña Cuentas, no en el repo: el repo es público).
 - Midinero = pago a la empleada doméstica (Servicio doméstico).
 - Los mails de Mili llegan reenviados por un filtro de Gmail hacia la cuenta de Juani. El reenvío conserva el `From` de Itaú.
 

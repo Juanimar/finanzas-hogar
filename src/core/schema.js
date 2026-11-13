@@ -43,3 +43,13 @@ export function objToRow(columns, obj) {
     return v;
   });
 }
+
+/**
+ * Apps Script escribe con setValues, que interpreta "=…" como fórmula. Los textos que vienen de afuera
+ * (mails, push, estados de cuenta) se escriben con apóstrofo para que queden como texto.
+ * La app no lo necesita: escribe con valueInputOption RAW.
+ */
+export function celdaSegura(v) {
+  if (typeof v !== 'string') return v;
+  return /^[=+@]/.test(v) || /^-[^\d.,\s]/.test(v) ? `'${v}` : v;
+}
