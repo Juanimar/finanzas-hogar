@@ -76,7 +76,8 @@ var FH = (() => {
     },
     categorias: { name: "Categorías", columns: ["nombre", "grupo", "orden", "activa"] },
     cotizaciones: { name: "Cotizaciones", columns: ["fecha", "usd_uyu", "fuente"] },
-    log: { name: "Log", columns: ["fecha_hora", "nivel", "evento", "detalle", "ref"] }
+    log: { name: "Log", columns: ["fecha_hora", "nivel", "evento", "detalle", "ref"] },
+    posiciones: { name: "Posiciones", columns: ["fecha", "total_usd", "efectivo_usd", "detalle", "origen", "creado"] }
   };
   var BOOL = { TRUE: true, FALSE: false };
   function rowToObj(columns, row) {
@@ -1100,27 +1101,32 @@ var FH = (() => {
       }
     }
   }
-  function pdfTextLines(bytes) {
-    const out = [];
+  function pdfTextItems(bytes) {
+    const pages = [];
     for (const content of streams(bytes)) {
       const items = [];
-      for (const bt of content.match(/BT[\s\S]*?ET/g) || []) {
-        let x2 = 0, y = 0;
-        const tok = /(-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) Tm|(-?[\d.]+) (-?[\d.]+) T[dD]|\(((?:\\[\s\S]|[^\\)])*)\)\s*Tj/g;
-        for (const t of bt.matchAll(tok)) {
-          if (t[1] !== void 0) {
-            x2 = Number(t[5]);
-            y = Number(t[6]);
-          } else if (t[7] !== void 0) {
-            x2 += Number(t[7]);
-            y += Number(t[8]);
-          } else items.push({ y, x: x2, text: unescapePdfString(t[9]) });
+      let x2 = 0, y = 0;
+      const tok = /\(((?:\\[\s\S]|[^\\)])*)\)\s*Tj|(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+Tm|(-?[\d.]+)\s+(-?[\d.]+)\s+T[dD]\b|\bBT\b/g;
+      for (const t of content.matchAll(tok)) {
+        if (t[1] !== void 0) items.push({ y, x: x2, text: unescapePdfString(t[1]) });
+        else if (t[2] !== void 0) {
+          x2 = Number(t[6]);
+          y = Number(t[7]);
+        } else if (t[8] !== void 0) {
+          x2 += Number(t[8]);
+          y += Number(t[9]);
+        } else {
+          x2 = 0;
+          y = 0;
         }
       }
       items.sort((a, b) => b.y - a.y || a.x - b.x);
-      out.push(...items.map((i2) => i2.text));
+      if (items.length) pages.push(items);
     }
-    return out;
+    return pages;
+  }
+  function pdfTextLines(bytes) {
+    return pdfTextItems(bytes).flatMap((items) => items.map((i2) => i2.text));
   }
 
   // src/core/estadoCuenta.js
