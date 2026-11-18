@@ -11,7 +11,6 @@ const fechaLarga = f => new Date(`${f}T12:00:00`).toLocaleDateString('es-UY', { 
 
 export function Inversiones({ state, store }) {
   const [subiendo, setSubiendo] = useState(null); // { estado: 'leyendo'|'listo'|'error', reporte?, error? }
-  const [verTenencias, setVerTenencias] = useState(false);
   const depositos = depositosInversiones(state.inversiones || []);
   const historial = historialCartera(state.posiciones || [], balancesInversiones(state.inversiones || []));
   const ultimo = historial.at(-1);
@@ -62,17 +61,16 @@ export function Inversiones({ state, store }) {
         </div>
       ) : (
         <Cartera ultimo={ultimo} reporte={ultimoReporte} depositos={depositos} historial={historial} refs={refs}
-          verTenencias={verTenencias} setVerTenencias={setVerTenencias} boton={boton} />
+          boton={boton} />
       )}
     </div>
   );
 }
 
-function Cartera({ ultimo, reporte, depositos, historial, refs, verTenencias, setVerTenencias, boton }) {
+function Cartera({ ultimo, reporte, depositos, historial, refs, boton }) {
   const r = resumenInversion(depositos, ultimo);
   const det = reporte?.detalle;
-  const efectivo = reporte?.efectivo;
-  const proximos = (det?.cupones || []).filter(c => c.fecha >= new Date().toISOString().slice(0, 10));
+    const proximos = (det?.cupones || []).filter(c => c.fecha >= new Date().toISOString().slice(0, 10));
   const totalCupones = proximos.reduce((a, c) => a + c.usd, 0);
   const comp = [...(det?.composicion || [])].sort((a, b) => b.usd - a.usd);
   const maxComp = Math.max(1, ...comp.map(c => c.usd));
@@ -96,9 +94,9 @@ function Cartera({ ultimo, reporte, depositos, historial, refs, verTenencias, se
           <div class="small muted">ponderado por cada depósito</div>
         </section>
         <section class="card">
-          <div class="muted small">Efectivo sin invertir</div>
-          <div class="mid">{efectivo != null ? usd0(efectivo) : '—'}</div>
-          {efectivo != null && <div class="small muted">{((efectivo / reporte.total) * 100).toFixed(1).replace('.', ',')}% de la cartera</div>}
+          <div class="muted small">Cupones por año</div>
+          <div class="mid">{totalCupones ? usd0(totalCupones) : '—'}</div>
+          {totalCupones > 0 && <div class="small muted">{((totalCupones / r.total) * 100).toFixed(1).replace('.', ',')}% de la cartera</div>}
         </section>
       </div>
 
@@ -121,8 +119,13 @@ function Cartera({ ultimo, reporte, depositos, historial, refs, verTenencias, se
               <span class="catamt">{c.pct.toFixed(0)}%</span>
             </div>
           ))}
-          <button class="ghost small" onClick={() => setVerTenencias(!verTenencias)}>{verTenencias ? 'Ocultar' : 'Ver'} los {det.tenencias.length} instrumentos</button>
-          {verTenencias && det.tenencias.filter(t => t.valor > 1).sort((a, b) => b.valor - a.valor).map(t => (
+        </section>
+      )}
+
+      {det?.tenencias?.length > 0 && (
+        <section class="card">
+          <div class="muted small">Tus instrumentos · valor y resultado vs. lo pagado</div>
+          {det.tenencias.filter(t => t.valor > 1).sort((a, b) => b.valor - a.valor).map(t => (
             <div key={t.nombre} class="tenencia">
               <span class="tn">{t.nombre}</span>
               <span class="tv">{usd0(t.valor)}{t.costo ? <span class={`small ${t.valor >= t.costo ? 'pos' : 'neg'}`}> {t.valor >= t.costo ? '+' : '−'}{(Math.abs(t.valor / t.costo - 1) * 100).toFixed(0)}%</span> : null}</span>
@@ -141,7 +144,7 @@ function Cartera({ ultimo, reporte, depositos, historial, refs, verTenencias, se
       )}
 
       <div class="center">{boton}</div>
-      {!reporte && <p class="small muted center">Subí un reporte para ver la composición, el efectivo y los cupones.</p>}
+      {!reporte && <p class="small muted center">Subí un reporte para ver la composición, los instrumentos y los cupones.</p>}
     </>
   );
 }

@@ -113,3 +113,6 @@ header .seg button.on { background: var(--green); color: #fff; font-weight: 600;
 .pt-valor { fill: #2a78d6; stroke: var(--card); stroke-width: 2; }
 .legend .sw.dash { background: repeating-linear-gradient(90deg, #8a8f8b 0 4px, transparent 4px 7px); height: 2px; width: 14px; border-radius: 0; }
 .refrow .tn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }
+.seg.subtabs { margin: 12px 16px 0; }
+nav .badge { display: inline-block; margin-left: 4px; min-width: 16px; padding: 0 5px; border-radius: 999px; background: #b4402a; color: #fff; font-size: 11px; line-height: 16px; font-weight: 700; }
+nav button { white-space: nowrap; }

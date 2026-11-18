@@ -81,14 +81,20 @@ function App() {
       </header>
       {state.error && <div class="toast" onClick={store.clearError}>{state.error} · tocá para cerrar</div>}
       {view.name === 'resumen' && <Resumen {...common} mode={mode} onPickMonth={m => { setMonth(m); setModo('mes'); window.scrollTo(0, 0); }} />}
+      {(view.name === 'categorias' || view.name === 'revisar') && !view.params.categoria && (
+        <div class="seg subtabs" role="tablist">
+          <button role="tab" class={view.name === 'categorias' ? 'on' : ''} onClick={() => go('categorias')}>Categorías</button>
+          <button role="tab" class={view.name === 'revisar' ? 'on' : ''} onClick={() => go('revisar')}>Revisar{pend ? ` (${pend})` : ''}</button>
+        </div>
+      )}
       {view.name === 'revisar' && <Review {...common} />}
       {view.name === 'categorias' && <Categories {...common} />}
       {view.name === 'movs' && <Movements {...common} />}
       {view.name === 'inversion' && <Inversiones {...common} />}
       {view.name !== 'revisar' && view.name !== 'inversion' && <button class="fab" onClick={() => setAdding(true)} aria-label="Agregar gasto">+</button>}
       <nav>
-        {[['resumen', 'Resumen'], ['revisar', `Revisar${pend ? ` (${pend})` : ''}`], ['categorias', 'Categ.'], ['movs', 'Movim.'], ['inversion', 'Inversión']].map(([k, l]) => (
-          <button key={k} class={view.name === k ? 'on' : ''} onClick={() => go(k)}>{l}</button>
+        {[['resumen', 'Resumen'], ['categorias', 'Categorías', pend], ['movs', 'Movim.'], ['inversion', 'Inversión']].map(([k, l, n]) => (
+          <button key={k} class={view.name === k || (k === 'categorias' && view.name === 'revisar') ? 'on' : ''} onClick={() => go(k)}>{l}{n ? <span class="badge">{n}</span> : null}</button>
         ))}
       </nav>
       {detail && (
