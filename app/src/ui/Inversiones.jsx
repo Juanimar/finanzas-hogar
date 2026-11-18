@@ -89,7 +89,7 @@ function Cartera({ ultimo, reporte, depositos, historial, refs, boton }) {
 
       <div class="row2">
         <section class="card">
-          <div class="muted small">Rendimiento anual</div>
+          <div class="muted small">Rendimiento anual (MWRR)</div>
           <div class="mid">{r.mwrr != null ? pct(r.mwrr) : '—'}</div>
           <div class="small muted">ponderado por cada depósito</div>
         </section>
@@ -102,7 +102,7 @@ function Cartera({ ultimo, reporte, depositos, historial, refs, boton }) {
 
       {refs.length > 0 && r.mwrr != null && (
         <section class="card">
-          <div class="muted small">Comparado con (tasas de tu planilla)</div>
+          <div class="muted small">Rendimiento anual (MWRR) comparado</div>
           {[{ nombre: 'Tu cartera', tasa: r.mwrr, propia: true }, ...refs].map(x => (
             <div key={x.nombre} class="refrow"><span class={x.propia ? 'strong' : ''}>{x.nombre}</span><span class={x.propia ? 'strong' : ''}>{pct(x.tasa)}</span></div>
           ))}
