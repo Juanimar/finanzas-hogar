@@ -5,9 +5,14 @@ App familiar que toma los avisos de Itaú desde Gmail, los clasifica y los muest
 ## Arquitectura
 
 ```
-Gmail (avisos Itaú) ──► Apps Script (diario 06:00 MVD) ──► Google Sheets (la base) ◄── PWA (GitHub Pages)
-                         └─ BCU (cotización USD)
+Gmail (avisos Itaú + reenvío de Mili) ─┐
+Estado de cuenta VISA (PDF por mail) ──┼─► Apps Script (diario 06:00 MVD) ──► Google Sheets (la base) ◄── PWA (GitHub Pages)
+Push Itaú (Android, MacroDroid) ───────┘   doPost al instante │  └─ BCU (cotización USD)          ▲
+                                                               │                                   │
+Reporte "Posición" de Maiorano (PDF) ─────── se sube desde la app y se lee en el navegador ────────┘
 ```
+
+Debilidades de escalabilidad y orden sugerido para atacarlas: `docs/arquitectura-escalabilidad.md`.
 
 - **`src/core/`**: toda la lógica, en JS puro y con pruebas. Lo usan el script y la app. **Toda lógica nueva va acá, con su prueba.**
   - `parsers.js`: lee los mails de Itaú (consumo de crédito y débito, transferencias, pagos de tarjeta).
@@ -18,12 +23,16 @@ Gmail (avisos Itaú) ──► Apps Script (diario 06:00 MVD) ──► Google S
   - `pipeline.js`: mails → movimientos, con detección de duplicados (`dupKey`).
   - `aggregate.js`: totales del mes y del año, acumulado por día, top de comercios.
   - `legacy.js`: importa la pestaña vieja "Gastos Mensuales" (jul 2024 a dic 2025).
-  - `inversiones.js`: sincroniza la pestaña "Inversiones" (depósitos en USD) como Ahorro/Inversión.
-  - `pdf.js` + `estadoCuenta.js`: leen el PDF mensual del estado de cuenta VISA (mail de info-mail@itau.com.uy) y agregan lo que no llegó por aviso. Itaú **no manda aviso** de muchos consumos (Mercado Pago, Uber exterior, tarjeta 1013, seguro de vida). Reglas del cruce: ventana ±7 días, cuotas 2..N se ignoran (la 1/N se compara contra cuota×N), compra + "REDUC. IVA" = monto neto del aviso, varias líneas del mismo día pueden sumar un solo aviso (eBay, propinas). Probado contra los estados de cuenta reales de 2026; **no commitear PDFs reales** (el repo es público).
+  - `inversiones.js`: sincroniza la pestaña "Inversiones" (depósitos en USD) como Ahorro/Inversión. También `depositosInversiones` y `balancesInversiones` (columna "Balance Maiorano") para la pantalla Inversión.
+  - `maiorano.js`: `parseMaiorano(pdfRows(...))` lee el reporte "Posición de Inversión" de Maiorano: total, efectivo, tipo de cambio, tenencias, composición por tipo y cupones.
+  - `rendimiento.js`: `xirr` (bisección), `resumenInversion` (aportado, ganancia, MWRR), `historialCartera` (une balances a mano y reportes subidos; el mismo día gana el reporte) y `referenciasPlanilla` (tasas "Tasa de Retorno X:" de la pestaña Inversiones).
+  - `pdf.js`: lector mínimo de PDF (FlateDecode con fflate, tokenizador secuencial de Tm/Td/Tj/BT). `pdfTextLines` para texto y `pdfRows` para tablas (agrupa celdas por altura). Ojo: los textos pueden contener "ET"/"BT" (FRANKLIN TEMPLETON, MARKET); no partir por esos operadores.
+  - `estadoCuenta.js`: leen el PDF mensual del estado de cuenta VISA (mail de info-mail@itau.com.uy) y agregan lo que no llegó por aviso. Itaú **no manda aviso** de muchos consumos (Mercado Pago, Uber exterior, tarjeta 1013, seguro de vida). Reglas del cruce: ventana ±7 días, cuotas 2..N se ignoran (la 1/N se compara contra cuota×N), compra + "REDUC. IVA" = monto neto del aviso, varias líneas del mismo día pueden sumar un solo aviso (eBay, propinas). Probado contra los estados de cuenta reales de 2026; **no commitear PDFs reales** (el repo es público).
   - `push.js`: notificaciones de la app de Itaú en el Android de Juani, reenviadas por MacroDroid a `doPost` (aplicación web del script, protegida con `PUSH_TOKEN` en Script Properties; menú "Configurar push de Android"). Entran al instante con `origen: push`; el mail posterior del mismo consumo se descarta en `pipeline.js` (misma tarjeta, monto y moneda, ±1 día). Formatos de push no reconocidos quedan en Log como `push_no_leido`.
 - **`apps-script/main.js`**: los puntos de entrada del script, como el menú "Finanzas", `procesarDiario` y `continuarReconstruccion`. Se empaqueta con esbuild en **`dist/Code.gs`**, que es un archivo generado y no se edita a mano. Las funciones globales se declaran en `ENTRY_POINTS` de `scripts/build-gas.mjs`.
 - **`app/`**: PWA en Preact + Vite. Entra con Google Identity Services y habla directo con la API de Sheets (lee con UNFORMATTED_VALUE y escribe con RAW). Con `?demo=1` usa datos de ejemplo, sin login.
-  - Pantallas: Resumen (con selector Mes/Año) · Revisar (clasificación con un toque) · Categorías · Movimientos.
+  - Pantallas (barra inferior): Resumen (selector Mes/Año) · Categorías (con sub-pestaña **Revisar** y contador de pendientes) · Movimientos · Inversión.
+  - Inversión: botón "Subir reporte de Maiorano (PDF)". El PDF se lee en el navegador (no se sube a ningún lado) y se guarda una fila por fecha en Posiciones. Muestra valor, ganancia sobre lo aportado, MWRR comparado con las tasas de la planilla, evolución, composición, instrumentos y cupones. No se guardan las credenciales del portal de Maiorano.
   - `app/src/config.js` tiene `ALLOWED_EMAILS` (Juani y Mili), el ID del cliente OAuth y el ID de la planilla.
 
 ## La planilla (base de datos)
@@ -38,7 +47,8 @@ ID: `1jyPGemEDElKxN4lxUPTmoHLAXvkbf249idA_bsWw9HI` ("Finanzas Juani-Mili"). Las 
 | Categorías | Grupos: Fijos, Variables, No es gasto, Ingresos |
 | Cotizaciones | Caché del BCU |
 | Log | Eventos del script. Se revisa para saber si "corrió bien" |
-| Gastos Mensuales, Inversiones | Pestañas del usuario. **Solo lectura** |
+| Posiciones | Foto de la cartera de Maiorano por fecha: `total_usd`, `efectivo_usd`, `detalle` (JSON con composición, tenencias, cupones y tipo de cambio), `origen` |
+| Gastos Mensuales, Inversiones | Pestañas del usuario. **Solo lectura**. La app lee Inversiones `A1:L300` con valores formateados |
 
 ## Comandos
 
@@ -53,7 +63,7 @@ npm run build:app        # build de la PWA
 ## Cómo publicar
 
 - **App:** al hacer push a `main`, GitHub Actions (`.github/workflows/pages.yml`) la publica en https://juanimar.github.io/finanzas-hogar/. Los usuarios tienen que cerrar y reabrir la app para ver la versión nueva.
-- **Script:** `npm run deploy:gas`. Antes hay que hacer, una sola vez: `npm i -g @google/clasp`, `clasp login` con la cuenta de Juani y activar la "API de Google Apps Script" en https://script.google.com/home/usersettings. El ID del proyecto está en `.clasp.json`, y `clasp push` reemplaza todos los archivos del proyecto con los de `dist/`. **Commitear siempre `dist/Code.gs`** junto con el cambio.
+- **Script:** `npm run deploy:gas`. **Hoy `clasp` no tiene login:** se publicó pegando `dist/Code.gs` en el editor (Monaco `pushEditOperations` + "Guardar proyecto en Drive"), verificando antes el SHA-256 contra el archivo commiteado. Hasta hacer `clasp login`, ese es el camino. Antes hay que hacer, una sola vez: `npm i -g @google/clasp`, `clasp login` con la cuenta de Juani y activar la "API de Google Apps Script" en https://script.google.com/home/usersettings. El ID del proyecto está en `.clasp.json`, y `clasp push` reemplaza todos los archivos del proyecto con los de `dist/`. **Commitear siempre `dist/Code.gs`** junto con el cambio.
 
 ## Decisiones tomadas (no reabrir sin preguntar)
 
@@ -68,11 +78,11 @@ npm run build:app        # build de la PWA
 
 ## Pendientes conocidos
 
-Ver el doc de estado en el Project de claude.ai ("estado-mvp"). Principalmente:
-- Los últimos 4 números de las tarjetas de Mili, para marcarlas como Mili en Cuentas.
-- Corrida de Reconstruir historial desde la cuenta de Mili.
-- Filtros en Movimientos.
-- Renovación de sesión sin volver a entrar.
+Ver el doc de estado en el Project de claude.ai ("estado-mvp") y `docs/arquitectura-escalabilidad.md`. Principalmente:
+- Escrituras parciales con control por `modificado` (hoy app y script pisan filas completas).
+- Aviso en la app cuando algo deja de entrar (formatos de Itaú, push mal configurado).
+- `clasp login` + publicación automática del script.
+- Filtros en Movimientos y renovación de sesión sin volver a entrar.
 
 ## Convenciones
 
