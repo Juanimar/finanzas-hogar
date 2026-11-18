@@ -12,6 +12,11 @@ export function sheetsClient(getToken) {
   async function call(path, opts = {}) {
     const r = await fetch(`${BASE}${path}`, { ...opts, headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' } });
     if (r.status === 401) throw Object.assign(new Error('Sesión vencida'), { code: 401 });
+    if (r.status === 403) {
+      const body = await r.text();
+      if (/insufficient|SCOPE/i.test(body)) throw Object.assign(new Error('Falta el permiso para la planilla'), { code: 403 });
+      throw new Error(`Sin permiso para la planilla (403). ¿Entraste con la cuenta correcta? ${body.slice(0, 120)}`);
+    }
     if (!r.ok) throw new Error(`Sheets ${r.status}: ${(await r.text()).slice(0, 200)}`);
     return r.json();
   }

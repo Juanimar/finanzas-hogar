@@ -46,7 +46,7 @@ export function createStore(client) {
           loading: false, movs, reglas, cuentas, cotizaciones, logs, posiciones, inversiones,
           categorias: categorias.filter(c => c.activa !== false).sort((a, b) => a.orden - b.orden),
         });
-      } catch (e) { set({ loading: false, error: e.message }); if (e.code === 401) throw e; }
+      } catch (e) { set({ loading: false, error: e.message }); if (e.code === 401 || e.code === 403) throw e; }
     },
 
     /** Guarda la foto de la cartera (reporte Maiorano). Una por fecha: si ya hay una ese día, la reemplaza. */

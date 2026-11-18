@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { createStore } from './store.js';
 import { sheetsClient } from './sheets.js';
 import { demoClient } from './demo.js';
-import { savedToken, signIn, signOut } from './auth.js';
+import { savedToken, signIn, signOut, FALTA_PERMISO } from './auth.js';
 import { Resumen } from './ui/Resumen.jsx';
 import { Inversiones } from './ui/Inversiones.jsx';
 import { Review } from './ui/Review.jsx';
@@ -25,7 +25,7 @@ function Login({ onToken, error }) {
     <div class="login">
       <h1>Finanzas del Hogar</h1>
       <p class="muted">Juani &amp; Mili</p>
-      <button class="primary" onClick={async () => { try { onToken(await signIn()); } catch (e) { setErr(e.message); } }}>Entrar con Google</button>
+      <button class="primary" onClick={async () => { try { onToken(await signIn({ consent: Boolean(err) })); } catch (e) { setErr(e.message); } }}>Entrar con Google</button>
       {err && <p class="error">{err}</p>}
     </div>
   );
@@ -47,6 +47,7 @@ function App() {
     if (!store) return;
     const off = store.subscribe(setState);
     store.load().catch(async e => {
+      if (e.code === 403) { signOut(); setToken(null); setAuthError(FALTA_PERMISO); return; }
       if (e.code === 401) { try { setToken(await signIn({ silent: true })); } catch { signOut(); setToken(null); setAuthError('Volvé a entrar.'); } }
     });
     return off;
