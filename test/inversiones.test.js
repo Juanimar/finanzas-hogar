@@ -32,3 +32,21 @@ describe('inversionesToMovs', () => {
     expect(inversionesToMovs(rows, e, NOW).some(m => m.fecha === '2026-06-03')).toBe(false);
   });
 });
+
+import { depositosInversiones, balancesInversiones } from '../src/core/inversiones.js';
+describe('lectura de la pestaña Inversiones para la pantalla de inversiones', () => {
+  const rows = [
+    ['', '', 'Total', '$10.000'],
+    ['Año', 'Mes', 'Depósitos', 'USD', 'Acumulado'],
+    ['2025', '1', '03/01/2025', '3000', '$3.000', '-3000', '', '', 'Fecha', 'Balance Maiorano'],
+    ['2025', '2', '6/2/2025', '$4.700', '$7.700', '-4700', '', '', '2/9/2025', '96300'],
+    ['2025', '3', '', '', '', '', '', '', '27/10/2026', '188.209,00'],
+    ['1899', '12'],
+  ];
+  it('depósitos con fecha y monto', () => {
+    expect(depositosInversiones(rows)).toEqual([{ fecha: '2025-01-03', usd: 3000 }, { fecha: '2025-02-06', usd: 4700 }]);
+  });
+  it('balances anotados a mano (columna "Balance Maiorano")', () => {
+    expect(balancesInversiones(rows)).toEqual([{ fecha: '2025-09-02', total: 96300 }, { fecha: '2026-10-27', total: 188209 }]);
+  });
+});

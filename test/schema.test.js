@@ -19,8 +19,8 @@ describe('schema', () => {
     expect(row).toEqual(['TRUE', 'FALSE']);
   });
 
-  it('has no duplicate columns and the 6 tabs', () => {
-    expect(Object.keys(TABS).sort()).toEqual(['categorias', 'cotizaciones', 'cuentas', 'log', 'movimientos', 'reglas']);
+  it('has no duplicate columns and the 7 tabs', () => {
+    expect(Object.keys(TABS).sort()).toEqual(['categorias', 'cotizaciones', 'cuentas', 'log', 'movimientos', 'posiciones', 'reglas']);
     for (const t of Object.values(TABS)) expect(new Set(t.columns).size).toBe(t.columns.length);
   });
 });

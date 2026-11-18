@@ -32,3 +32,23 @@ export function inversionesToMovs(rows, existentes, now) {
   }
   return out;
 }
+
+/** Depósitos de la pestaña Inversiones: [{fecha, usd}]. */
+export function depositosInversiones(rows) {
+  const start = rows.findIndex(r => String(r[2]).trim() === 'Depósitos' && String(r[3]).trim() === 'USD');
+  if (start < 0) return [];
+  return rows.slice(start + 1).map(r => ({ fecha: parseDate(r[2]), usd: usd(r[3]) })).filter(d => d.fecha && d.usd > 0);
+}
+
+/** Balances anotados a mano en la columna "Balance Maiorano": [{fecha, total}]. */
+export function balancesInversiones(rows) {
+  let col = -1;
+  const out = [];
+  for (const r of rows) {
+    if (col < 0) { col = r.findIndex(c => String(c).trim() === 'Balance Maiorano'); continue; }
+    const fecha = parseDate(r[col - 1]);
+    const total = usd(r[col]);
+    if (fecha && total > 0) out.push({ fecha, total });
+  }
+  return out;
+}

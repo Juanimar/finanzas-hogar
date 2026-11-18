@@ -2,7 +2,7 @@ import { SPREADSHEET_ID } from './config.js';
 import { TABS, rowToObj, objToRow } from '../../src/core/schema.js';
 import { resolveRows } from './rows.js';
 
-const ID_FIELD = { movimientos: 'id', reglas: 'id', cuentas: 'numero' };
+const ID_FIELD = { movimientos: 'id', reglas: 'id', cuentas: 'numero', posiciones: 'fecha' };
 
 const BASE = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`;
 const colLetter = n => { let s = ''; for (; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s; return s; };
@@ -20,6 +20,11 @@ export function sheetsClient(getToken) {
       const tab = TABS[key];
       const d = await call(`/values/${range(tab, 2)}?valueRenderOption=UNFORMATTED_VALUE`);
       return (d.values || []).map((row, i) => ({ ...rowToObj(tab.columns, row), _row: i + 2 }));
+    },
+    /** Lectura cruda de una pestaña del usuario (como se ve en la planilla). */
+    async readRange(a1) {
+      const d = await call(`/values/${encodeURIComponent(a1)}?valueRenderOption=FORMATTED_VALUE`);
+      return d.values || [];
     },
     async updateRows(key, objs) {
       if (!objs.length) return;

@@ -5,6 +5,7 @@ import { sheetsClient } from './sheets.js';
 import { demoClient } from './demo.js';
 import { savedToken, signIn, signOut } from './auth.js';
 import { Resumen } from './ui/Resumen.jsx';
+import { Inversiones } from './ui/Inversiones.jsx';
 import { Review } from './ui/Review.jsx';
 import { Categories } from './ui/Categories.jsx';
 import { Movements } from './ui/Movements.jsx';
@@ -71,19 +72,22 @@ function App() {
             <button role="tab" class={mode === 'anio' ? 'on' : ''} onClick={() => setModo('anio')}>Año</button>
           </div>
         )}
+        {view.name === 'inversion' ? <span class="month">Inversiones</span> : <>
         <button class="ghost" onClick={() => setMonth(shiftMonth(month, -step))} aria-label={anual ? 'Año anterior' : 'Mes anterior'}>‹</button>
         <button class="month" onClick={() => setMonth(thisMonth())}>{anual ? month.slice(0, 4) : cap(monthLabel(month)).replace(' de ', ' ')}</button>
         <button class="ghost" onClick={() => setMonth(shiftMonth(month, step))} aria-label={anual ? 'Año siguiente' : 'Mes siguiente'}>›</button>
         <button class="cur" onClick={toggleCurrency}>{currency === 'UYU' ? '$' : 'US$'}</button>
+        </>}
       </header>
       {state.error && <div class="toast" onClick={store.clearError}>{state.error} · tocá para cerrar</div>}
       {view.name === 'resumen' && <Resumen {...common} mode={mode} onPickMonth={m => { setMonth(m); setModo('mes'); window.scrollTo(0, 0); }} />}
       {view.name === 'revisar' && <Review {...common} />}
       {view.name === 'categorias' && <Categories {...common} />}
       {view.name === 'movs' && <Movements {...common} />}
-      {view.name !== 'revisar' && <button class="fab" onClick={() => setAdding(true)} aria-label="Agregar gasto">+</button>}
+      {view.name === 'inversion' && <Inversiones {...common} />}
+      {view.name !== 'revisar' && view.name !== 'inversion' && <button class="fab" onClick={() => setAdding(true)} aria-label="Agregar gasto">+</button>}
       <nav>
-        {[['resumen', 'Resumen'], ['revisar', `Revisar${pend ? ` (${pend})` : ''}`], ['categorias', 'Categorías'], ['movs', 'Movim.']].map(([k, l]) => (
+        {[['resumen', 'Resumen'], ['revisar', `Revisar${pend ? ` (${pend})` : ''}`], ['categorias', 'Categ.'], ['movs', 'Movim.'], ['inversion', 'Inversión']].map(([k, l]) => (
           <button key={k} class={view.name === k ? 'on' : ''} onClick={() => go(k)}>{l}</button>
         ))}
       </nav>

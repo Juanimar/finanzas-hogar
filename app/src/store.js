@@ -5,7 +5,7 @@ import { pickRate, computeAmounts } from '../../src/core/money.js';
 import { nowMontevideoIso } from '../../src/core/dates.js';
 
 export function createStore(client) {
-  let state = { loading: true, error: null, movs: [], reglas: [], cuentas: [], categorias: [], cotizaciones: [], logs: [] };
+  let state = { loading: true, error: null, movs: [], reglas: [], cuentas: [], categorias: [], cotizaciones: [], logs: [], posiciones: [], inversiones: [] };
   const subs = new Set();
   const set = patch => { state = { ...state, ...patch }; subs.forEach(f => f(state)); };
 
@@ -36,14 +36,30 @@ export function createStore(client) {
     async load() {
       set({ loading: true, error: null });
       try {
-        const [movs, reglas, cuentas, categorias, cotizaciones, logs] = await Promise.all(
-          ['movimientos', 'reglas', 'cuentas', 'categorias', 'cotizaciones', 'log'].map(k => client.readTab(k).catch(e => (k === 'log' ? [] : Promise.reject(e)))),
-        );
+        const opcional = new Set(['log', 'posiciones']);
+        const [[movs, reglas, cuentas, categorias, cotizaciones, logs, posiciones], inversiones] = await Promise.all([
+          Promise.all(['movimientos', 'reglas', 'cuentas', 'categorias', 'cotizaciones', 'log', 'posiciones']
+            .map(k => client.readTab(k).catch(e => (opcional.has(k) ? [] : Promise.reject(e))))),
+          (client.readRange ? client.readRange("'Inversiones'!A1:L300") : Promise.resolve([])).catch(() => []),
+        ]);
         set({
-          loading: false, movs, reglas, cuentas, cotizaciones, logs,
+          loading: false, movs, reglas, cuentas, cotizaciones, logs, posiciones, inversiones,
           categorias: categorias.filter(c => c.activa !== false).sort((a, b) => a.orden - b.orden),
         });
       } catch (e) { set({ loading: false, error: e.message }); if (e.code === 401) throw e; }
+    },
+
+    /** Guarda la foto de la cartera (reporte Maiorano). Una por fecha: si ya hay una ese día, la reemplaza. */
+    guardarPosicion(p) {
+      return guard(async () => {
+        const fila = {
+          fecha: p.fecha, total_usd: p.total, efectivo_usd: p.efectivo,
+          detalle: JSON.stringify({ composicion: p.composicion, tenencias: p.tenencias, cupones: p.cupones, tipoCambio: p.tipoCambio }),
+          origen: 'reporte_maiorano', creado: nowMontevideoIso(),
+        };
+        const posiciones = await upsert('posiciones', state.posiciones, fila, x => String(x.fecha) === p.fecha);
+        set({ posiciones });
+      });
     },
 
     /** Confirm or correct a movement; learns a rule/account and resolves similar pending ones. */

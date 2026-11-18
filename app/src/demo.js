@@ -29,10 +29,19 @@ export function demoClient() {
   const db = {
     movimientos: movs, reglas, cuentas,
     categorias: SEED_CATEGORIAS, cotizaciones: [{ fecha: `${cur}-01`, usd_uyu: 40.2 }],
+    log: [], posiciones: [],
   };
+  const inversiones = [
+    ['Año', 'Mes', 'Depósitos', 'USD', 'Acumulado', '', '', '', 'Fecha', 'Balance Maiorano'],
+    ['2024', '1', '15/1/2024', '$10.000', '', '', '', '', '1/6/2024', '10.400'],
+    ['2024', '7', '1/7/2024', '$5.000', '', '', '', '', '1/1/2025', '16.300'],
+    ['2025', '1', '10/1/2025', '$5.000', '', '', '', '', '1/7/2025', '22.100'],
+    ['2025', '7', '5/7/2025', '$5.000', '', '', '', '', '1/1/2026', '28.900'],
+  ];
   db.movimientos.forEach((m, i) => (m._row = i + 2));
   return {
-    readTab: async k => db[k].map(x => ({ ...x })),
+    readTab: async k => (db[k] || []).map(x => ({ ...x })),
+    readRange: async () => inversiones,
     updateRows: async () => {},
     appendRows: async (k, objs) => objs.map((o, i) => ({ ...o, _row: 1000 + i })),
   };

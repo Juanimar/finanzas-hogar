@@ -42,22 +42,40 @@ function* streams(bytes) {
   }
 }
 
-/** Devuelve los textos del PDF, de arriba hacia abajo dentro de cada página. */
-export function pdfTextLines(bytes) {
-  const out = [];
+/** Celdas de texto con su posición, agrupadas por página (cada stream de contenido es una página). */
+export function pdfTextItems(bytes) {
+  const pages = [];
   for (const content of streams(bytes)) {
     const items = [];
-    for (const bt of content.match(/BT[\s\S]*?ET/g) || []) {
-      let x = 0, y = 0;
-      const tok = /(-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) Tm|(-?[\d.]+) (-?[\d.]+) T[dD]|\(((?:\\[\s\S]|[^\\)])*)\)\s*Tj/g;
-      for (const t of bt.matchAll(tok)) {
-        if (t[1] !== undefined) { x = Number(t[5]); y = Number(t[6]); }
-        else if (t[7] !== undefined) { x += Number(t[7]); y += Number(t[8]); }
-        else items.push({ y, x, text: unescapePdfString(t[9]) });
-      }
+    // Tokenizador secuencial: los strings se consumen enteros, así "ET"/"BT" dentro del texto no cortan nada.
+    let x = 0, y = 0;
+    const tok = /\(((?:\\[\s\S]|[^\\)])*)\)\s*Tj|(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+Tm|(-?[\d.]+)\s+(-?[\d.]+)\s+T[dD]\b|\bBT\b/g;
+    for (const t of content.matchAll(tok)) {
+      if (t[1] !== undefined) items.push({ y, x, text: unescapePdfString(t[1]) });
+      else if (t[2] !== undefined) { x = Number(t[6]); y = Number(t[7]); }
+      else if (t[8] !== undefined) { x += Number(t[8]); y += Number(t[9]); }
+      else { x = 0; y = 0; }
     }
     items.sort((a, b) => b.y - a.y || a.x - b.x);
-    out.push(...items.map(i => i.text));
+    if (items.length) pages.push(items);
   }
-  return out;
+  return pages;
+}
+
+/** Devuelve los textos del PDF, de arriba hacia abajo dentro de cada página. */
+export function pdfTextLines(bytes) {
+  return pdfTextItems(bytes).flatMap(items => items.map(i => i.text));
+}
+
+/** Filas de una tabla: celdas con (casi) la misma altura, ordenadas de izquierda a derecha. */
+export function pdfRows(bytes, tolerancia = 2) {
+  const rows = [];
+  for (const items of pdfTextItems(bytes)) {
+    let fila = null;
+    for (const it of items) {
+      if (!fila || Math.abs(fila.y - it.y) > tolerancia) { fila = { y: it.y, cells: [] }; rows.push(fila); }
+      fila.cells.push({ x: it.x, text: it.text.trim() });
+    }
+  }
+  return rows.map(r => r.cells.sort((a, b) => a.x - b.x).map(c => c.text).filter(Boolean)).filter(r => r.length);
 }

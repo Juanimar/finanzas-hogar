@@ -97,3 +97,19 @@ header .seg button.on { background: var(--green); color: #fff; font-weight: 600;
 .dividir { margin: 6px 0 10px; display: grid; gap: 8px; }
 .dividir-otro { display: grid; gap: 8px; }
 .amt .small { font-weight: 400; text-align: right; }
+.upload { display: inline-block; margin-top: 10px; cursor: pointer; text-align: center; }
+.row-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+.pos { color: #1a7f4e; font-weight: 600; }
+.neg { color: #b4402a; font-weight: 600; }
+.strong { font-weight: 700; }
+.refrow { display: flex; justify-content: space-between; padding: 6px 0; font-variant-numeric: tabular-nums; border-bottom: 1px solid var(--line); }
+.refrow:last-child { border-bottom: 0; }
+.tenencia { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--line); }
+.tenencia .tn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tenencia .tv { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.evol { width: 100%; margin-top: 10px; }
+.ln-valor { fill: none; stroke: #2a78d6; stroke-width: 2; stroke-linejoin: round; }
+.ln-aport { fill: none; stroke: #8a8f8b; stroke-width: 2; stroke-dasharray: 4 3; }
+.pt-valor { fill: #2a78d6; stroke: var(--card); stroke-width: 2; }
+.legend .sw.dash { background: repeating-linear-gradient(90deg, #8a8f8b 0 4px, transparent 4px 7px); height: 2px; width: 14px; border-radius: 0; }
+.refrow .tn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }

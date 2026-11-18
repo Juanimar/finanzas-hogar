@@ -19,6 +19,7 @@ export const TABS = {
   categorias: { name: 'Categorías', columns: ['nombre', 'grupo', 'orden', 'activa'] },
   cotizaciones: { name: 'Cotizaciones', columns: ['fecha', 'usd_uyu', 'fuente'] },
   log: { name: 'Log', columns: ['fecha_hora', 'nivel', 'evento', 'detalle', 'ref'] },
+  posiciones: { name: 'Posiciones', columns: ['fecha', 'total_usd', 'efectivo_usd', 'detalle', 'origen', 'creado'] },
 };
 
 const BOOL = { TRUE: true, FALSE: false };

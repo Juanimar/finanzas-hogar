@@ -144,6 +144,10 @@ describe('pdfTextLines', () => {
     const c = 'BT\n1 0 0 1 24.5 591.6 Tm\n/F1 7 Tf\n(linea uno)Tj\n1 0 0 1 24.5 584.6 Tm\n(linea dos)Tj\nET';
     expect(pdfTextLines(pdf([stream(c)]))).toEqual(['linea uno', 'linea dos']);
   });
+  it('no se confunde con letras "ET"/"BT" dentro del texto', () => {
+    const c = 'BT\n1 0 0 1 29 357 Tm\n(SCHRODER GLOBAL CREDIT)Tj\nET\nBT\n1 0 0 1 29 340 Tm\n(FRANKLIN TEMPLETON -TECHNOLOGY)Tj\nET\nBT\n1 0 0 1 29 330 Tm\n(DEBT FUND)Tj\nET';
+    expect(pdfTextLines(pdf([stream(c)]))).toEqual(['SCHRODER GLOBAL CREDIT', 'FRANKLIN TEMPLETON -TECHNOLOGY', 'DEBT FUND']);
+  });
   it('decodifica acentos WinAnsi (octal)', () => {
     const c = 'BT\n1 0 0 1 24.5 500 Tm\n(D\\311BITO AUTOM\\301TICO)Tj\nET';
     expect(pdfTextLines(pdf([stream(c)]))).toEqual(['DÉBITO AUTOMÁTICO']);
